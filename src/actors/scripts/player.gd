@@ -38,11 +38,12 @@ var can_attack = true
 var current_speed = run_speed
 var current_up_speed = jump_speed
 var is_running = true
+var prior_to_crouch_state
 var is_going_to_climb = false
 var last_ladder
 var last_wall
-var starting_y = 0
 
+var jump_direction
 var facing = Vector2.RIGHT
 
 func _ready():
@@ -52,7 +53,7 @@ func _ready():
 func _process(_delta):
 	check_shoot_input()
 	check_melee_input()
-	check_vert_input()
+	check_climb_input()
 	check_speed_input()
 	check_crouch_input()
 	match actualState:
@@ -86,7 +87,7 @@ func _on_PlayerArea_area_entered(area):
 				can_climb = true
 				last_ladder = area
 			"ParkourWall":
-				if is_on_floor(): 
+				if is_on_floor() and facing.x == area.get_climbable_vector().x * - 1.0: 
 					can_wallrun = true
 					last_wall = area
 			"Enemy":
@@ -101,7 +102,7 @@ func _on_playerArea_area_exited(area):
 				#set_state(states.IDLE, actualState)
 			"ParkourWall":
 				can_wallrun = false
-				set_state(states.IDLE, actualState)
+				enter_movement_state()
 
 func _on_meleeArea_body_entered(body):
 	if body.is_in_group("Enemy"):
@@ -135,11 +136,14 @@ func _physics_process(delta):
 			enter_movement_state()
 		states.JUMPING:
 			move(delta)
-			enter_movement_state()
+			exit_jump_state()
 		states.FALLING:
 			move(delta)
-			enter_movement_state()
+			exit_falling_state()
 		states.WALL_RUNNING:
+			move(delta)
+			exit_wallrun_state()
+		states.WALL_JUMPING:
 			move(delta)
 			exit_wallrun_state()
 
@@ -160,22 +164,33 @@ func enter_movement_state():
 		set_state(states.CROUCH_WALK, actualState)
 		return states.CROUCH_WALK
 	if !is_on_floor() and velocity.y < 0 and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP:
+		if !jump_direction: jump_direction = get_x_movement()
 		set_state(states.JUMPING, actualState)
 		return states.JUMPING
 	if !is_on_floor() and velocity.y > 0 and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP:
+		if !jump_direction: jump_direction = get_x_movement()
 		set_state(states.FALLING, actualState)
 		return states.FALLING
 	print("passou nos ifs")
 	set_state(states.IDLE, actualState)
 	return states.IDLE
 
+func exit_jump_state():
+	if velocity.y > 0:
+		set_state(states.FALLING, actualState)
+
+func exit_falling_state():
+	if is_on_floor():
+		jump_direction = null
+		set_state(states.IDLE, actualState)
+
 func exit_climb_state():
 	if is_on_floor():
-		enter_movement_state()
+		set_state(states.IDLE, actualState)
 
 func exit_wallrun_state():
 	if velocity.y > 0:
-		enter_movement_state()
+		set_state(states.FALLING, actualState)
 
 func move_to_ladder():
 	if is_going_to_climb and position.x != last_ladder.position.x:
@@ -197,50 +212,87 @@ func get_move_direction():
 	var movement = Vector2.ZERO
 	movement.x = 0
 	match actualState:
+		states.IDLE, states.WALKING, states.RUNNING, states.CROUCHED, states.CROUCH_WALK:
+			movement.x = get_x_movement()
+			movement = check_jump_input(movement)
+			return movement
+		states.JUMPING:
+			if jump_direction:
+				movement.x = jump_direction
+			else: movement.x = 0
+			return movement
+		states.FALLING:
+			if jump_direction:
+				movement.x = jump_direction
+			elif priorState == states.JUMPING or priorState == states.WALL_RUNNING:
+				movement.x = 0
+			else: movement.x = get_x_movement()
+			return movement
 		states.CLIMBING_DOWN, states.CLIMBING_UP:
-			movement.y = Input.get_action_strength("climb_down") - Input.get_action_strength("climb_up")
+			movement.y = get_y_movement()
 			current_up_speed = climb_speed
+			can_jump = true
+			movement = check_jump_input(movement)
 			return movement
 		states.WALL_RUNNING:
 			movement.y = -1.0 if is_on_floor() and can_wallrun else 0.0
 			current_up_speed = wall_speed
+			can_jump = true
+			movement = check_jump_input(movement)
 			return movement
-	movement.x = (Input.get_action_strength("move_right") - Input.get_action_strength("move_left"))
-	movement.y = -1.0 if Input.get_action_strength("jump") and is_on_floor() and can_jump else 0.0
-	if movement.y < 0: 
-		can_jump = false
-		current_up_speed = jump_speed
-		set_state(states.JUMPING, priorState)
-		jumpTimer.start()
-	elif movement.y > 0 and is_on_floor():
-		movement.y = 0
-	return movement
+		states.WALL_JUMPING:
+			movement.y = -1.0
+			current_up_speed = jump_speed
+			movement.x = last_wall.get_climbable_vector().x
+			return movement
+	return Vector2.ZERO
+
+func get_x_movement():
+	return Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+
+func get_y_movement():
+	return Input.get_action_strength("climb_down") - Input.get_action_strength("climb_up")
 
 func calculate_move_velocity(linear_velocity, direction, up_speed, delta):
 	var out = linear_velocity
 	out.x = current_speed * direction.x
 	out.y += gravity * delta
-	if direction.y == -1.0:
+	if direction.y != 0:
 		out.y = up_speed * direction.y
-	elif direction.y == 1.0:
+	elif actualState == states.CLIMBING_DOWN or actualState == states.CLIMBING_UP:
 		out.y = 0
 	return out
 
-func check_vert_input():
+func check_jump_input(movement = Vector2.ZERO):
+	if Input.is_action_pressed("jump") and can_jump:
+		if actualState == states.WALL_RUNNING:
+			set_state(states.WALL_JUMPING, actualState)
+			movement.x = last_wall.get_climbable_vector().x
+			jump_direction = movement.x
+		else: 
+			set_state(states.JUMPING, actualState)
+			movement.x = get_x_movement()
+			jump_direction = movement.x
+		movement.y = - 1.0
+		can_jump = false
+		current_up_speed = jump_speed
+		jumpTimer.start()
+	return movement
+
+func check_climb_input():
 	if can_climb and Input.is_action_just_pressed("climb_up"):
-		set_state(states.CLIMBING_UP, priorState)
+		set_state(states.CLIMBING_UP, actualState)
 		current_up_speed = climb_speed
 		is_going_to_climb = true
 		last_ladder.set_platform_collision(true)
 	elif can_climb and Input.is_action_just_pressed("climb_down"):
-		set_state(states.CLIMBING_DOWN, priorState)
+		set_state(states.CLIMBING_DOWN, actualState)
 		current_up_speed = climb_speed
 		is_going_to_climb = true
 		last_ladder.set_platform_collision(false)
 	elif can_wallrun and Input.is_action_just_pressed("climb_up"):
+		set_state(states.WALL_RUNNING, actualState)
 		current_up_speed = wall_speed
-		starting_y = position.y
-		set_state(states.WALL_RUNNING, priorState)
 
 func check_speed_input():
 	if Input.is_action_just_pressed("dash") and is_on_floor():
@@ -254,14 +306,14 @@ func check_speed_input():
 			enter_movement_state()
 
 func check_crouch_input():
-	if Input.is_action_just_pressed("crouch") and is_on_floor() and actualState != states.JUMPING and actualState != states.FALLING and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP:
+	if Input.is_action_just_pressed("crouch") and is_on_floor() and actualState != states.JUMPING and actualState != states.FALLING and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP and actualState != states.WALL_JUMPING and actualState != states.WALL_RUNNING:
 		if actualState == states.CROUCHED or actualState == states.CROUCH_WALK:
-			print_state(priorState)
-			current_speed = get_state_speed(priorState)
+			current_speed = get_state_speed(prior_to_crouch_state)
 			set_state(priorState,actualState)
 		else:
 			current_speed = crouch_speed
-			set_state(states.CROUCHED, priorState)
+			prior_to_crouch_state = actualState
+			set_state(states.CROUCHED, actualState)
 
 func check_shoot_input():
 	if Input.is_action_just_pressed("shoot") and can_shoot:
@@ -319,3 +371,7 @@ func print_state(state):
 			print("CLIMBING_UP")
 		states.CLIMBING_DOWN:
 			print("CLIMBING_DOWN")
+		states.WALL_RUNNING:
+			print("WALL_RUNNING")
+		states.WALL_JUMPING:
+			print("WALL_JUMPING")

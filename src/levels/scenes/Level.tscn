@@ -93,14 +93,20 @@ position = Vector2( 240, 6.85714 )
 scale = Vector2( 6, 1 )
 
 [node name="ParkourArea_01" parent="ClimbableAreas" instance=ExtResource( 9 )]
-position = Vector2( 1632, 1152 )
+position = Vector2( 1640, 1152 )
 scale = Vector2( 1, 10 )
+
+[node name="ParkourArea_02" parent="ClimbableAreas" instance=ExtResource( 9 )]
+position = Vector2( 1336, 480 )
+rotation = 3.14159
+scale = Vector2( 1, 7 )
+climbable_side = Vector2( 1, 0 )
 
 [node name="OneWayPlatforms" type="Node2D" parent="."]
 
 [node name="OneWayPlatform" parent="OneWayPlatforms" instance=ExtResource( 10 )]
-position = Vector2( 1623, 246 )
-scale = Vector2( 8.1, 1 )
+position = Vector2( 1622, 204 )
+scale = Vector2( 8.1, 2 )
 
 [editable path="Player"]
 

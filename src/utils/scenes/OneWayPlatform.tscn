@@ -9,6 +9,6 @@ collision_mask = 2147483651
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 modulate = Color( 0.886275, 0.941176, 0.403922, 1 )
-position = Vector2( 48, -48 )
+position = Vector2( 48, 0 )
 shape = SubResource( 1 )
 one_way_collision = true
