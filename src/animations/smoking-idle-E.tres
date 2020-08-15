@@ -1,0 +1,17 @@
+[gd_resource type="Animation" format=2]
+
+[resource]
+resource_name = "smoking_E"
+length = 5.0
+tracks/0/type = "value"
+tracks/0/path = NodePath("castOrigin:rotation_degrees")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.5, 1, 1.7, 2.5, 3.2, 4.5, 5 ),
+"transitions": PoolRealArray( 1, 1, 1, 1, 1, 1, 1, 1 ),
+"update": 0,
+"values": [ 0.0, 90.0, 90.0, 96.0, 99.0, 90.0, 81.0, 0.0 ]
+}
