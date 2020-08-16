@@ -44,7 +44,7 @@ format = 1
 tile_data = PoolIntArray( 524351, 2, 0, 589886, 2, 0, 589887, -1610612736, 0, 655421, 2, 0, 655422, -1610612736, 0, 655423, -1610612736, 0, 720932, 2, 0, 720933, 0, 0, 720934, 0, 0, 720935, -1610612734, 0, 720956, 2, 0, 720957, -1610612736, 0, 720958, -1610612736, 0, 720959, -1610612736, 0 )
 
 [node name="Player" parent="." instance=ExtResource( 2 )]
-position = Vector2( 750, 1150 )
+position = Vector2( 750, 1152 )
 speed = 400.0
 
 [node name="Camera2D" parent="Player" index="2"]
@@ -59,7 +59,7 @@ position = Vector2( -1200, 0 )
 [node name="2" parent="ER01_points" index="2"]
 position = Vector2( 800, 0 )
 
-[node name="EnemyRanged" parent="." instance=ExtResource( 6 )]
+[node name="ER01" parent="." instance=ExtResource( 6 )]
 position = Vector2( 2420, 1150 )
 idles = [ "smoking", "turn", "turn" ]
 waypoints_path = NodePath("../ER01_points")
@@ -82,14 +82,14 @@ tile_data = PoolIntArray( 458766, -1610612736, 0, 458767, 1, 0, 458768, -1610612
 [node name="ClimbableAreas" type="Node2D" parent="."]
 
 [node name="Ladder_01" parent="ClimbableAreas" instance=ExtResource( 8 )]
-position = Vector2( 816, 768 )
+position = Vector2( 818, 763 )
 scale = Vector2( 1, 7 )
 
 [node name="CollisionShape2D" parent="ClimbableAreas/Ladder_01" index="0"]
 position = Vector2( 0, 7.57142 )
 
 [node name="OneWayPlatform" parent="ClimbableAreas/Ladder_01" index="1"]
-position = Vector2( 240, 6.85714 )
+position = Vector2( -50, -40.4286 )
 scale = Vector2( 6, 1 )
 
 [node name="ParkourArea_01" parent="ClimbableAreas" instance=ExtResource( 9 )]
@@ -103,10 +103,15 @@ scale = Vector2( 1, 7 )
 climbable_side = Vector2( 1, 0 )
 
 [node name="OneWayPlatforms" type="Node2D" parent="."]
+position = Vector2( 10, 0 )
 
 [node name="OneWayPlatform" parent="OneWayPlatforms" instance=ExtResource( 10 )]
-position = Vector2( 1622, 204 )
-scale = Vector2( 8.1, 2 )
+position = Vector2( 1622, 192 )
+scale = Vector2( 8, 8 )
+
+[node name="OneWayPlatform2" parent="OneWayPlatforms" instance=ExtResource( 10 )]
+position = Vector2( 1622, 480 )
+scale = Vector2( 8, 8 )
 
 [editable path="Player"]
 

@@ -4,6 +4,7 @@ class_name Actor
 export var speed = 500.0
 export var run_speed = 800.0
 export var wall_speed = 1300.0
+export var wall_jump_speed = 600
 export var max_speed = 800.0
 export var crouch_speed = 200
 export var climb_speed = 250.0

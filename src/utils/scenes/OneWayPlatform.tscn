@@ -1,14 +1,29 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=3 format=2]
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 48, 6 )
 
-[node name="OneWayPlatform" type="StaticBody2D"]
-collision_layer = 8
+[sub_resource type="RectangleShape2D" id=2]
+extents = Vector2( 52, 6 )
+
+[node name="OneWayPlatform" type="StaticBody2D" groups=[
+"OneWayPlatform",
+]]
+collision_layer = 16
 collision_mask = 2147483651
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 modulate = Color( 0.886275, 0.941176, 0.403922, 1 )
-position = Vector2( 48, 0 )
+position = Vector2( 48, 6 )
 shape = SubResource( 1 )
 one_way_collision = true
+
+[node name="LedgeArea" type="Area2D" parent="." groups=[
+"OneWayPlatform",
+]]
+monitoring = false
+collision_layer = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LedgeArea"]
+position = Vector2( 48, 6 )
+shape = SubResource( 2 )

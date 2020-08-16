@@ -7,11 +7,17 @@ onready var castOrigin = $castOrigin
 onready var meleeSprite = $meleeArea/meleeSlash
 onready var meleeArea = $meleeArea
 onready var animationPlayer = $AnimationPlayer
-onready var jumpTimer = $jumpTimer
+onready var jumpTimer: Timer = $jumpTimer
+onready var tapTimer: Timer = $tapTimer
 onready var tween = $Tween
+onready var bottomRightRC: RayCast2D = $bottomRightRC
+onready var bottomLeftRC: RayCast2D = $bottomLeftRC2
+onready var topRightRC: RayCast2D = $topRightRC
+onready var topLeftRC: RayCast2D = $topLeftRC
 
 onready var label = $Label
 
+export var jump_force = 0.25
 export var rate_of_fire = 0.5
 export var attack_speed = 0.3
 
@@ -26,16 +32,20 @@ enum states {
 	CLIMBING_UP,
 	CLIMBING_DOWN,
 	WALL_RUNNING,
-	WALL_JUMPING
+	WALL_JUMPING,
+	ON_LEDGE
 }
 
 var can_jump = true
 var can_climb = false
+var slide_down = false
 var can_wallrun = false
+var can_grab_ledge = true
 var can_shoot = true
 var can_attack = true
 
 var current_speed = run_speed
+var prior_speed = current_speed
 var current_up_speed = jump_speed
 var is_running = true
 var prior_to_crouch_state
@@ -79,6 +89,8 @@ func _process(_delta):
 			label.text = "WALL RUNNING"
 		states.WALL_JUMPING:
 			label.text = "WALL JUMPING"
+		states.ON_LEDGE:
+			label.text = "ON LEDGE"
 	
 func _on_PlayerArea_area_entered(area):
 	if area.get_groups():
@@ -90,6 +102,8 @@ func _on_PlayerArea_area_entered(area):
 				if is_on_floor() and facing.x == area.get_climbable_vector().x * - 1.0: 
 					can_wallrun = true
 					last_wall = area
+			"OneWayPlatform":
+				can_grab_ledge = true
 			"Enemy":
 				print("you're dead!")
 
@@ -136,15 +150,18 @@ func _physics_process(delta):
 			enter_movement_state()
 		states.JUMPING:
 			move(delta)
+			if is_on_ledge() and can_grab_ledge: enter_on_ledge_state()
 			exit_jump_state()
 		states.FALLING:
 			move(delta)
+			if is_on_ledge() and can_grab_ledge: enter_on_ledge_state()
 			exit_falling_state()
 		states.WALL_RUNNING:
 			move(delta)
 			exit_wallrun_state()
 		states.WALL_JUMPING:
 			move(delta)
+			set_facing()
 			exit_wallrun_state()
 
 func enter_movement_state():
@@ -175,22 +192,41 @@ func enter_movement_state():
 	set_state(states.IDLE, actualState)
 	return states.IDLE
 
+func enter_on_ledge_state():
+	set_state(states.ON_LEDGE, actualState)
+	velocity = Vector2.ZERO
+
 func exit_jump_state():
 	if velocity.y > 0:
 		set_state(states.FALLING, actualState)
 
 func exit_falling_state():
 	if is_on_floor():
+		current_speed = prior_speed
 		jump_direction = null
+		can_grab_ledge = true
 		set_state(states.IDLE, actualState)
 
 func exit_climb_state():
 	if is_on_floor():
+		slide_down = false
 		set_state(states.IDLE, actualState)
 
 func exit_wallrun_state():
 	if velocity.y > 0:
 		set_state(states.FALLING, actualState)
+
+func is_on_ledge():
+	match(facing):
+		Vector2.LEFT:
+			if bottomLeftRC.is_colliding() and !topLeftRC.is_colliding():
+				print("Ledge à esquerda")
+				return true
+		Vector2.RIGHT:
+			if bottomRightRC.is_colliding() and !topRightRC.is_colliding():
+				print("Ledge à direita")
+				return true
+	return false
 
 func move_to_ladder():
 	if is_going_to_climb and position.x != last_ladder.position.x:
@@ -218,12 +254,16 @@ func get_move_direction():
 			return movement
 		states.JUMPING:
 			if jump_direction:
-				movement.x = jump_direction
+				var force = get_x_movement()
+				movement.x = jump_direction + (jump_force * force)
 			else: movement.x = 0
 			return movement
 		states.FALLING:
-			if jump_direction:
-				movement.x = jump_direction
+			if priorState == states.ON_LEDGE:
+				movement.x = 0
+			elif jump_direction:
+				var force = get_x_movement()
+				movement.x = jump_direction + (jump_force * force)
 			elif priorState == states.JUMPING or priorState == states.WALL_RUNNING:
 				movement.x = 0
 			else: movement.x = get_x_movement()
@@ -242,6 +282,7 @@ func get_move_direction():
 			return movement
 		states.WALL_JUMPING:
 			movement.y = -1.0
+			current_speed = wall_jump_speed
 			current_up_speed = jump_speed
 			movement.x = last_wall.get_climbable_vector().x
 			return movement
@@ -258,7 +299,7 @@ func calculate_move_velocity(linear_velocity, direction, up_speed, delta):
 	out.x = current_speed * direction.x
 	out.y += gravity * delta
 	if direction.y != 0:
-		out.y = up_speed * direction.y
+		if !slide_down: out.y = up_speed * direction.y
 	elif actualState == states.CLIMBING_DOWN or actualState == states.CLIMBING_UP:
 		out.y = 0
 	return out
@@ -275,6 +316,7 @@ func check_jump_input(movement = Vector2.ZERO):
 			jump_direction = movement.x
 		movement.y = - 1.0
 		can_jump = false
+		prior_speed = current_speed
 		current_up_speed = jump_speed
 		jumpTimer.start()
 	return movement
@@ -286,6 +328,9 @@ func check_climb_input():
 		is_going_to_climb = true
 		last_ladder.set_platform_collision(true)
 	elif can_climb and Input.is_action_just_pressed("climb_down"):
+		if actualState == states.CLIMBING_DOWN and !tapTimer.is_stopped():
+			slide_down = true
+		tapTimer.start()
 		set_state(states.CLIMBING_DOWN, actualState)
 		current_up_speed = climb_speed
 		is_going_to_climb = true
@@ -293,6 +338,9 @@ func check_climb_input():
 	elif can_wallrun and Input.is_action_just_pressed("climb_up"):
 		set_state(states.WALL_RUNNING, actualState)
 		current_up_speed = wall_speed
+	elif actualState == states.ON_LEDGE and Input.is_action_just_pressed("climb_down"):
+		can_grab_ledge = false
+		set_state(states.FALLING, actualState)
 
 func check_speed_input():
 	if Input.is_action_just_pressed("dash") and is_on_floor():
@@ -346,6 +394,12 @@ func set_cast_point_side():
 func on_hit():
 	print("Foi atingido!")
 
+func set_facing():
+	if velocity.x < 0:
+		facing = Vector2.LEFT
+	else: facing = Vector2.RIGHT
+	set_cast_point_side()
+
 func get_state_speed(state):
 	if state == states.RUNNING:
 		return run_speed
@@ -375,3 +429,5 @@ func print_state(state):
 			print("WALL_RUNNING")
 		states.WALL_JUMPING:
 			print("WALL_JUMPING")
+		states.ON_LEDGE:
+			print("ON_LEDGE")

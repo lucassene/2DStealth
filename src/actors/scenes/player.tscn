@@ -10,7 +10,7 @@ radius = 44.0
 height = 96.0
 
 [sub_resource type="CapsuleShape2D" id=2]
-radius = 40.0
+radius = 42.0
 height = 104.0
 
 [sub_resource type="RectangleShape2D" id=3]
@@ -54,13 +54,14 @@ position = Vector2( 0, -144 )
 position = Vector2( 64, 0 )
 
 [node name="playerArea" type="Area2D" parent="."]
+position = Vector2( 0, 2 )
 monitorable = false
 collision_layer = 0
-collision_mask = 6
+collision_mask = 22
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="playerArea"]
-modulate = Color( 0.0588235, 0.937255, 0.235294, 1 )
-position = Vector2( 0, -92 )
+modulate = Color( 0.541176, 0.0588235, 0.937255, 1 )
+position = Vector2( 1, -94 )
 shape = SubResource( 2 )
 
 [node name="meleeArea" type="Area2D" parent="."]
@@ -81,9 +82,6 @@ texture = ExtResource( 3 )
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 anims/meleeSlash = ExtResource( 4 )
 
-[node name="jumpTimer" type="Timer" parent="."]
-one_shot = true
-
 [node name="Tween" type="Tween" parent="."]
 
 [node name="Label" type="Label" parent="."]
@@ -100,9 +98,40 @@ align = 1
 __meta__ = {
 "_edit_use_anchors_": true
 }
+
+[node name="jumpTimer" type="Timer" parent="."]
+one_shot = true
+
+[node name="tapTimer" type="Timer" parent="."]
+wait_time = 0.5
+one_shot = true
+
+[node name="bottomRightRC" type="RayCast2D" parent="."]
+position = Vector2( 48, -96 )
+enabled = true
+cast_to = Vector2( 20, 0 )
+collision_mask = 20
+
+[node name="bottomLeftRC2" type="RayCast2D" parent="."]
+position = Vector2( -48, -96 )
+enabled = true
+cast_to = Vector2( -20, 0 )
+collision_mask = 20
+
+[node name="topRightRC" type="RayCast2D" parent="."]
+position = Vector2( 36, -172 )
+enabled = true
+cast_to = Vector2( 60, 0 )
+collision_mask = 20
+
+[node name="topLeftRC" type="RayCast2D" parent="."]
+position = Vector2( -36, -172 )
+enabled = true
+cast_to = Vector2( -60, 0 )
+collision_mask = 20
 [connection signal="area_entered" from="playerArea" to="." method="_on_PlayerArea_area_entered"]
 [connection signal="area_exited" from="playerArea" to="." method="_on_playerArea_area_exited"]
 [connection signal="body_entered" from="meleeArea" to="." method="_on_meleeArea_body_entered"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
-[connection signal="timeout" from="jumpTimer" to="." method="_on_jumpTimer_timeout"]
 [connection signal="tween_completed" from="Tween" to="." method="_on_Tween_completed"]
+[connection signal="timeout" from="jumpTimer" to="." method="_on_jumpTimer_timeout"]
