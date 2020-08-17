@@ -108,27 +108,23 @@ one_shot = true
 
 [node name="bottomRightRC" type="RayCast2D" parent="."]
 position = Vector2( 48, -96 )
-enabled = true
 cast_to = Vector2( 20, 0 )
-collision_mask = 20
+collision_mask = 16
 
 [node name="bottomLeftRC2" type="RayCast2D" parent="."]
 position = Vector2( -48, -96 )
-enabled = true
 cast_to = Vector2( -20, 0 )
-collision_mask = 20
+collision_mask = 16
 
 [node name="topRightRC" type="RayCast2D" parent="."]
 position = Vector2( 36, -172 )
-enabled = true
 cast_to = Vector2( 60, 0 )
-collision_mask = 20
+collision_mask = 16
 
 [node name="topLeftRC" type="RayCast2D" parent="."]
 position = Vector2( -36, -172 )
-enabled = true
 cast_to = Vector2( -60, 0 )
-collision_mask = 20
+collision_mask = 16
 [connection signal="area_entered" from="playerArea" to="." method="_on_PlayerArea_area_entered"]
 [connection signal="area_exited" from="playerArea" to="." method="_on_playerArea_area_exited"]
 [connection signal="body_entered" from="meleeArea" to="." method="_on_meleeArea_body_entered"]

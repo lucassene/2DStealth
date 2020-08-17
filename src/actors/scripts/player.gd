@@ -40,7 +40,7 @@ var can_jump = true
 var can_climb = false
 var slide_down = false
 var can_wallrun = false
-var can_grab_ledge = true
+var can_grab_ledge = false
 var can_shoot = true
 var can_attack = true
 
@@ -50,8 +50,8 @@ var current_up_speed = jump_speed
 var is_running = true
 var prior_to_crouch_state
 var is_going_to_climb = false
-var last_ladder
-var last_wall
+var last_ladder: Area2D 
+var last_wall: Area2D
 
 var jump_direction
 var facing = Vector2.RIGHT
@@ -66,6 +66,7 @@ func _process(_delta):
 	check_climb_input()
 	check_speed_input()
 	check_crouch_input()
+	if can_wallrun and last_wall: can_wallrun_check(last_wall)
 	match actualState:
 		states.IDLE:
 			label.text = "IDLE"
@@ -99,11 +100,9 @@ func _on_PlayerArea_area_entered(area):
 				can_climb = true
 				last_ladder = area
 			"ParkourWall":
-				if is_on_floor() and facing.x == area.get_climbable_vector().x * - 1.0: 
-					can_wallrun = true
-					last_wall = area
-			"OneWayPlatform":
-				can_grab_ledge = true
+				can_wallrun_check(area)
+			"Ledge":
+				can_grab_check(area)
 			"Enemy":
 				print("you're dead!")
 
@@ -112,11 +111,17 @@ func _on_playerArea_area_exited(area):
 		match area.get_groups()[0]:
 			"Climbable":
 				can_climb = false
-				enter_movement_state()
-				#set_state(states.IDLE, actualState)
+				match actualState:
+					states.CROUCHED, states.CROUCH_WALK:
+						enter_crouch_state()
+						return
+					states.JUMPING, states.FALLING:
+						return
+				enter_idle_state()
 			"ParkourWall":
 				can_wallrun = false
-				enter_movement_state()
+			"Ledge":
+				can_grab_ledge = false
 
 func _on_meleeArea_body_entered(body):
 	if body.is_in_group("Enemy"):
@@ -134,119 +139,38 @@ func _on_Tween_completed(_object, _key):
 
 func _physics_process(delta):
 	match(actualState):
-		states.CLIMBING_UP:
+		states.CLIMBING_UP, states.CLIMBING_DOWN:
 			move_to_ladder()
 			move(delta)
 			exit_climb_state()
-		states.CLIMBING_DOWN:
-			move_to_ladder()
+		states.CROUCHED, states.CROUCH_WALK:
 			move(delta)
-			exit_climb_state()
-		states.IDLE:
+			enter_crouch_state()
+		states.IDLE, states.WALKING, states.RUNNING:
 			move(delta)
-			enter_movement_state()
-		states.WALKING, states.RUNNING, states.CROUCHED, states.CROUCH_WALK:
-			move(delta)
-			enter_movement_state()
+			set_movement_state()
 		states.JUMPING:
 			move(delta)
-			if is_on_ledge() and can_grab_ledge: enter_on_ledge_state()
+			if is_on_ledge(): enter_on_ledge_state()
 			exit_jump_state()
 		states.FALLING:
 			move(delta)
-			if is_on_ledge() and can_grab_ledge: enter_on_ledge_state()
+			if is_on_ledge(): enter_on_ledge_state()
 			exit_falling_state()
 		states.WALL_RUNNING:
 			move(delta)
 			exit_wallrun_state()
 		states.WALL_JUMPING:
 			move(delta)
-			set_facing()
 			exit_wallrun_state()
-
-func enter_movement_state():
-	if is_on_floor() and velocity == Vector2.ZERO and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP and current_speed != crouch_speed:
-		set_state(states.IDLE, actualState)
-		return states.IDLE
-	if is_on_floor() and velocity.x != 0 and velocity.y == 0 and current_speed == speed:
-		set_state(states.WALKING, actualState)
-		return states.WALKING
-	if is_on_floor() and velocity.x != 0 and velocity.y == 0 and current_speed == run_speed:
-		set_state(states.RUNNING, actualState)
-		return states.RUNNING
-	if is_on_floor() and velocity == Vector2.ZERO and current_speed == crouch_speed:
-		set_state(states.CROUCHED, actualState)
-		return states.CROUCHED
-	if is_on_floor() and velocity.x != 0 and velocity.y == 0 and current_speed == crouch_speed:
-		set_state(states.CROUCH_WALK, actualState)
-		return states.CROUCH_WALK
-	if !is_on_floor() and velocity.y < 0 and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP:
-		if !jump_direction: jump_direction = get_x_movement()
-		set_state(states.JUMPING, actualState)
-		return states.JUMPING
-	if !is_on_floor() and velocity.y > 0 and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP:
-		if !jump_direction: jump_direction = get_x_movement()
-		set_state(states.FALLING, actualState)
-		return states.FALLING
-	print("passou nos ifs")
-	set_state(states.IDLE, actualState)
-	return states.IDLE
-
-func enter_on_ledge_state():
-	set_state(states.ON_LEDGE, actualState)
-	velocity = Vector2.ZERO
-
-func exit_jump_state():
-	if velocity.y > 0:
-		set_state(states.FALLING, actualState)
-
-func exit_falling_state():
-	if is_on_floor():
-		current_speed = prior_speed
-		jump_direction = null
-		can_grab_ledge = true
-		set_state(states.IDLE, actualState)
-
-func exit_climb_state():
-	if is_on_floor():
-		slide_down = false
-		set_state(states.IDLE, actualState)
-
-func exit_wallrun_state():
-	if velocity.y > 0:
-		set_state(states.FALLING, actualState)
-
-func is_on_ledge():
-	match(facing):
-		Vector2.LEFT:
-			if bottomLeftRC.is_colliding() and !topLeftRC.is_colliding():
-				print("Ledge à esquerda")
-				return true
-		Vector2.RIGHT:
-			if bottomRightRC.is_colliding() and !topRightRC.is_colliding():
-				print("Ledge à direita")
-				return true
-	return false
-
-func move_to_ladder():
-	if is_going_to_climb and position.x != last_ladder.position.x:
-		tween.interpolate_property(self,"position",Vector2(position.x,position.y),Vector2(last_ladder.position.x,position.y),0.1,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
-		tween.start()
-	else: is_going_to_climb = false
 
 func move(delta):
 	velocity = calculate_move_velocity(velocity, get_move_direction(), current_up_speed, delta)
+	set_facing()
 	velocity = move_and_slide(velocity,FLOOR_NORMAL,true)
 
 func get_move_direction():
-	if Input.is_action_pressed("move_right"):
-		facing = Vector2.RIGHT
-		set_cast_point_side()
-	if Input.is_action_pressed("move_left"):
-		facing = Vector2.LEFT
-		set_cast_point_side()
 	var movement = Vector2.ZERO
-	movement.x = 0
 	match actualState:
 		states.IDLE, states.WALKING, states.RUNNING, states.CROUCHED, states.CROUCH_WALK:
 			movement.x = get_x_movement()
@@ -281,8 +205,6 @@ func get_move_direction():
 			movement = check_jump_input(movement)
 			return movement
 		states.WALL_JUMPING:
-			movement.y = -1.0
-			current_speed = wall_jump_speed
 			current_up_speed = jump_speed
 			movement.x = last_wall.get_climbable_vector().x
 			return movement
@@ -304,64 +226,167 @@ func calculate_move_velocity(linear_velocity, direction, up_speed, delta):
 		out.y = 0
 	return out
 
+func set_movement_state():
+	if is_on_floor():
+		if is_stationary():
+			enter_idle_state()
+			return
+		else:
+			match current_speed:
+				speed:
+					enter_walking_state()
+				run_speed:
+					enter_running_state()
+	else:
+		if velocity.y < 0: enter_jump_state(velocity)
+		if velocity.y > 0: enter_falling_state()
+
+func enter_idle_state():
+	set_state(states.IDLE, actualState)
+
+func enter_walking_state():
+	set_state(states.WALKING, actualState)
+
+func enter_running_state():
+	set_state(states.RUNNING, actualState)
+
+func enter_crouch_state():
+	if velocity.x != 0: 
+		set_state(states.CROUCH_WALK, actualState)
+	else: set_state(states.CROUCHED, actualState)
+
+func exit_crouch_state():
+	if is_running:
+		current_speed = run_speed
+	else: 
+		current_speed = speed
+	set_movement_state()
+
+func enter_on_ledge_state():
+	set_state(states.ON_LEDGE, actualState)
+	velocity = Vector2.ZERO
+
+func enter_jump_state(movement):
+	set_state(states.JUMPING, actualState)
+	movement.x = get_x_movement()
+	jump_direction = movement.x
+	movement.y = - 1.0
+	can_jump = false
+	prior_speed = current_speed
+	current_up_speed = jump_speed
+	jumpTimer.start()
+	enable_ray_casts(true)
+	return movement
+
+func exit_jump_state():
+	if velocity.y > 0: enter_falling_state()
+
+func enter_falling_state():
+	set_state(states.FALLING, actualState)
+	enable_ray_casts(true)
+
+func exit_falling_state():
+	if is_on_floor():
+		current_speed = prior_speed
+		jump_direction = null
+		can_grab_ledge = false
+		enter_idle_state()
+		enable_ray_casts(false)
+		if last_wall: can_wallrun_check(last_wall)
+
+func enter_climb_state(state):
+	current_up_speed = climb_speed
+	set_state(state, actualState)
+	is_going_to_climb = true
+	last_ladder.set_platform_collision(false)
+
+func exit_climb_state():
+	if is_on_floor():
+		slide_down = false
+		set_state(states.IDLE, actualState)
+
+func enter_wallrun_state():
+	current_up_speed = wall_speed
+	set_state(states.WALL_RUNNING, actualState)
+
+func exit_wallrun_state():
+	if velocity.y > 0: enter_falling_state()
+
+func enter_wall_jump_state(movement):
+	set_state(states.WALL_JUMPING, actualState)
+	movement.x = last_wall.get_climbable_vector().x
+	jump_direction = movement.x
+	movement.y = - 1.0
+	can_jump = false
+	prior_speed = current_speed
+	current_up_speed = wall_jump_speed
+	jumpTimer.start()
+	set_facing()
+	return movement
+
+func is_stationary():
+	return true if velocity == Vector2.ZERO else false
+
+func is_on_ledge():
+	if can_grab_ledge and bottomLeftRC.is_colliding() and !topLeftRC.is_colliding():
+		print("Ledge à esquerda")
+		return true
+
+	if can_grab_ledge and bottomRightRC.is_colliding() and !topRightRC.is_colliding():
+		print("Ledge à direita")
+		return true
+	
+	return false
+
+func move_to_ladder():
+	if is_going_to_climb and position.x != last_ladder.position.x:
+		tween.interpolate_property(self,"position",Vector2(position.x,position.y),Vector2(last_ladder.position.x,position.y),0.1,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
+		tween.start()
+	else: is_going_to_climb = false
+
 func check_jump_input(movement = Vector2.ZERO):
 	if Input.is_action_pressed("jump") and can_jump:
 		if actualState == states.WALL_RUNNING:
-			set_state(states.WALL_JUMPING, actualState)
-			movement.x = last_wall.get_climbable_vector().x
-			jump_direction = movement.x
-		else: 
-			set_state(states.JUMPING, actualState)
-			movement.x = get_x_movement()
-			jump_direction = movement.x
-		movement.y = - 1.0
-		can_jump = false
-		prior_speed = current_speed
-		current_up_speed = jump_speed
-		jumpTimer.start()
+			movement = enter_wall_jump_state(movement)
+		else:
+			movement = enter_jump_state(movement)
 	return movement
 
 func check_climb_input():
 	if can_climb and Input.is_action_just_pressed("climb_up"):
-		set_state(states.CLIMBING_UP, actualState)
-		current_up_speed = climb_speed
-		is_going_to_climb = true
+		enter_climb_state(states.CLIMBING_UP)
 		last_ladder.set_platform_collision(true)
 	elif can_climb and Input.is_action_just_pressed("climb_down"):
-		if actualState == states.CLIMBING_DOWN and !tapTimer.is_stopped():
-			slide_down = true
+		if actualState == states.CLIMBING_DOWN and !tapTimer.is_stopped(): slide_down = true
 		tapTimer.start()
-		set_state(states.CLIMBING_DOWN, actualState)
-		current_up_speed = climb_speed
-		is_going_to_climb = true
-		last_ladder.set_platform_collision(false)
+		enter_climb_state(states.CLIMBING_DOWN)
 	elif can_wallrun and Input.is_action_just_pressed("climb_up"):
-		set_state(states.WALL_RUNNING, actualState)
-		current_up_speed = wall_speed
+		enter_wallrun_state()
 	elif actualState == states.ON_LEDGE and Input.is_action_just_pressed("climb_down"):
 		can_grab_ledge = false
-		set_state(states.FALLING, actualState)
+		enter_falling_state()
 
 func check_speed_input():
-	if Input.is_action_just_pressed("dash") and is_on_floor():
-		if is_running:
-			is_running = false
-			current_speed = speed
-			enter_movement_state()
+	if Input.is_action_just_pressed("dash") and is_on_floor() and actualState != states.CROUCHED:
+		if actualState == states.CROUCH_WALK:
+			exit_crouch_state()
 		else:
-			is_running = true
-			current_speed = run_speed
-			enter_movement_state()
+			if is_running:
+				is_running = false
+				current_speed = speed
+				set_movement_state()
+			else:
+				is_running = true
+				current_speed = run_speed
+				set_movement_state()
 
 func check_crouch_input():
 	if Input.is_action_just_pressed("crouch") and is_on_floor() and actualState != states.JUMPING and actualState != states.FALLING and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP and actualState != states.WALL_JUMPING and actualState != states.WALL_RUNNING:
 		if actualState == states.CROUCHED or actualState == states.CROUCH_WALK:
-			current_speed = get_state_speed(prior_to_crouch_state)
-			set_state(priorState,actualState)
-		else:
+			exit_crouch_state()
+		else: 
 			current_speed = crouch_speed
-			prior_to_crouch_state = actualState
-			set_state(states.CROUCHED, actualState)
+			enter_crouch_state()
 
 func check_shoot_input():
 	if Input.is_action_just_pressed("shoot") and can_shoot:
@@ -378,7 +403,23 @@ func check_melee_input():
 	if Input.is_action_just_pressed("slash") and can_attack:
 		can_attack = false
 		animationPlayer.play("meleeSlash")
-		
+
+func can_wallrun_check(area):
+	can_wallrun = false
+	if is_on_floor() and facing == Vector2.LEFT and area.get_climbable_vector() == Vector2.RIGHT and position.x >= area.get_global_position().x:
+			can_wallrun = true
+			last_wall = area
+	if is_on_floor() and facing == Vector2.RIGHT and area.get_climbable_vector() == Vector2.LEFT and position.x <= area.get_global_position().x:
+			can_wallrun = true
+			last_wall = area
+
+func can_grab_check(area):
+	can_grab_ledge = false
+	if facing == Vector2.LEFT and area.get_climbable_vector() == Vector2.RIGHT and position.x >= area.get_global_position().x:
+			can_grab_ledge = true
+	if facing == Vector2.RIGHT and area.get_climbable_vector() == Vector2.LEFT and position.x <= area.get_global_position().x:
+			can_grab_ledge = true
+
 func set_cast_point_side():
 	if facing == Vector2.RIGHT:
 		castOrigin.rotation_degrees = 0
@@ -397,13 +438,23 @@ func on_hit():
 func set_facing():
 	if velocity.x < 0:
 		facing = Vector2.LEFT
-	else: facing = Vector2.RIGHT
+	elif velocity.x > 0: 
+		facing = Vector2.RIGHT
 	set_cast_point_side()
 
-func get_state_speed(state):
-	if state == states.RUNNING:
-		return run_speed
-	else: return speed
+func enable_ray_casts(value):
+	if value:
+		if facing == Vector2.LEFT:
+			bottomLeftRC.enabled = value
+			topLeftRC.enabled = value
+		elif facing == Vector2.RIGHT:
+			bottomRightRC.enabled = value
+			topRightRC.enabled = value
+	else:
+		bottomLeftRC.enabled = value
+		topLeftRC.enabled = value
+		bottomRightRC.enabled = value
+		topRightRC.enabled = value
 
 func print_state(state):
 	match state:
