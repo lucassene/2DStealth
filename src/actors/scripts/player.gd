@@ -10,10 +10,12 @@ onready var animationPlayer = $AnimationPlayer
 onready var jumpTimer: Timer = $jumpTimer
 onready var tapTimer: Timer = $tapTimer
 onready var tween = $Tween
+onready var fadeTween = $FadeTween
 onready var bottomRightRC: RayCast2D = $bottomRightRC
 onready var bottomLeftRC: RayCast2D = $bottomLeftRC2
 onready var topRightRC: RayCast2D = $topRightRC
 onready var topLeftRC: RayCast2D = $topLeftRC
+onready var sprite = $sprite
 
 onready var label = $Label
 
@@ -33,14 +35,24 @@ enum states {
 	CLIMBING_DOWN,
 	WALL_RUNNING,
 	WALL_JUMPING,
-	ON_LEDGE
+	ON_LEDGE,
+	CLIMBING_LEDGE,
+	LEDGE_JUMP,
+	HIDING
+}
+
+enum fade_type {
+	IN,
+	OUT
 }
 
 var can_jump = true
+var jump_pressed = false
 var can_climb = false
 var slide_down = false
 var can_wallrun = false
 var can_grab_ledge = false
+var can_hide = false
 var can_shoot = true
 var can_attack = true
 
@@ -50,23 +62,26 @@ var current_up_speed = jump_speed
 var is_running = true
 var prior_to_crouch_state
 var is_going_to_climb = false
+var is_going_to_ledge = false
+var is_going_to_hide = false
+var climbing_ledge = false
 var last_ladder: Area2D 
 var last_wall: Area2D
+var last_ledge: Area2D
+var last_hideout: Area2D
 
 var jump_direction
 var facing = Vector2.RIGHT
+var sprite_size
 
 func _ready():
+	sprite_size = sprite.get_texture().get_size().x
 	set_state(states.IDLE,states.IDLE)
 	jumpTimer.wait_time = jump_time
 
 func _process(_delta):
-	check_shoot_input()
-	check_melee_input()
-	check_climb_input()
-	check_speed_input()
-	check_crouch_input()
-	if can_wallrun and last_wall: can_wallrun_check(last_wall)
+	# DEV ONLY
+	set_time_scale()
 	match actualState:
 		states.IDLE:
 			label.text = "IDLE"
@@ -92,17 +107,37 @@ func _process(_delta):
 			label.text = "WALL JUMPING"
 		states.ON_LEDGE:
 			label.text = "ON LEDGE"
+		states.CLIMBING_LEDGE:
+			label.text = "CLIMBING LEDGE"
+		states.LEDGE_JUMP:
+			label.text = "LEDGE JUMP"
+		states.HIDING:
+			label.text = "HIDING"
+	label.text = String(facing.x) + " | " + label.text
 	
+func set_time_scale():
+	if Input.is_action_just_pressed("time_stop"):
+		Engine.time_scale = 0.0
+	if Input.is_action_just_pressed("slow-motion"):
+		Engine.time_scale = 0.25
+	if Input.is_action_just_pressed("normal_time"):
+		Engine.time_scale = 1.0
+
 func _on_PlayerArea_area_entered(area):
 	if area.get_groups():
 		match area.get_groups()[0]:
 			"Climbable":
-				can_climb = true
 				last_ladder = area
-			"ParkourWall":
-				can_wallrun_check(area)
+				can_climb = true
+			"TriggerArea":
+				match area.get_area_type():
+					area.type.PARKOUR_WALL:
+						can_wallrun_check(area)
+					area.type.HIDEOUT:
+						last_hideout = area
+						can_hide = true
 			"Ledge":
-				can_grab_check(area)
+				if actualState != states.LEDGE_JUMP: can_grab_check(area)
 			"Enemy":
 				print("you're dead!")
 
@@ -118,8 +153,13 @@ func _on_playerArea_area_exited(area):
 					states.JUMPING, states.FALLING:
 						return
 				enter_idle_state()
-			"ParkourWall":
-				can_wallrun = false
+			"TriggerArea":
+				match area.get_area_type():
+					area.type.PARKOUR_WALL:
+						can_wallrun = false
+					area.type.HIDEOUT:
+						if actualState == states.HIDING or priorState == states.HIDING: exit_hiding_state()
+						can_hide = false
 			"Ledge":
 				can_grab_ledge = false
 
@@ -128,46 +168,74 @@ func _on_meleeArea_body_entered(body):
 		body.on_hit()
 
 func _on_AnimationPlayer_animation_finished(anim_name):
-	if anim_name == "meleeSlash":
-		can_attack = true
+	match anim_name:
+		"meleeSlash":
+			can_attack = true
+		"jump_to_hide":
+			can_jump = true
+			is_going_to_hide = false
+			if actualState != states.HIDING: enter_hiding_state()
 
 func _on_jumpTimer_timeout():
 	can_jump = true
 
 func _on_Tween_completed(_object, _key):
 	is_going_to_climb = false
+	if can_wallrun_check(last_wall): enter_wallrun_state()
+	
+	if is_going_to_ledge:
+		enter_on_ledge_state()
+		is_going_to_ledge = false
+		
+	if actualState == states.CLIMBING_LEDGE and climbing_ledge:
+		tween_position(Vector2(position.x + sprite_size * 1.25 * facing.x,position.y),0.25)
+		climbing_ledge = false
+	elif actualState == states.CLIMBING_LEDGE and !climbing_ledge:
+		exit_climb_ledge_state()
+		
+	if z_index <= 0 or z_index > 1 and actualState != states.HIDING:
+		is_going_to_hide = true
+		enter_hiding_state()
 
 func _physics_process(delta):
 	match(actualState):
 		states.CLIMBING_UP, states.CLIMBING_DOWN:
-			move_to_ladder()
-			move(delta)
+			move(delta, Vector2.ZERO)
 			exit_climb_state()
 		states.CROUCHED, states.CROUCH_WALK:
 			move(delta)
 			enter_crouch_state()
 		states.IDLE, states.WALKING, states.RUNNING:
-			move(delta)
+			if !is_going_to_hide: move(delta, snap_vector if !jump_pressed else Vector2.ZERO)
 			set_movement_state()
 		states.JUMPING:
-			move(delta)
-			if is_on_ledge(): enter_on_ledge_state()
+			move(delta, Vector2.ZERO)
+			move_to_ledge()
 			exit_jump_state()
 		states.FALLING:
 			move(delta)
-			if is_on_ledge(): enter_on_ledge_state()
+			move_to_ledge()
 			exit_falling_state()
 		states.WALL_RUNNING:
-			move(delta)
+			move(delta, Vector2.ZERO)
 			exit_wallrun_state()
 		states.WALL_JUMPING:
-			move(delta)
+			move(delta, Vector2.ZERO)
+			move_to_ledge()
 			exit_wallrun_state()
+		states.ON_LEDGE:
+			check_jump_input(Vector2.ZERO)
+		states.LEDGE_JUMP:
+			move(delta, Vector2.ZERO)
+			exit_ledge_jump_state()
+		states.HIDING:
+			if !is_going_to_hide: move(delta, snap_vector if !jump_pressed else Vector2.ZERO)
+			if velocity != Vector2.ZERO and !last_hideout.can_move or z_index == 0: exit_hiding_state()
 
-func move(delta):
+func move(delta, vector = snap_vector):
 	velocity = calculate_move_velocity(velocity, get_move_direction(), current_up_speed, delta)
 	set_facing()
-	velocity = move_and_slide(velocity,FLOOR_NORMAL,true)
+	velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
 
 func get_move_direction():
 	var movement = Vector2.ZERO
@@ -199,14 +267,24 @@ func get_move_direction():
 			movement = check_jump_input(movement)
 			return movement
 		states.WALL_RUNNING:
-			movement.y = -1.0 if is_on_floor() and can_wallrun else 0.0
+			movement.y = -1.0 if is_on_floor() else 0.0
 			current_up_speed = wall_speed
 			can_jump = true
 			movement = check_jump_input(movement)
 			return movement
 		states.WALL_JUMPING:
 			current_up_speed = jump_speed
-			movement.x = last_wall.get_climbable_vector().x
+			movement.x = last_wall.get_enter_vector().x * -1.0
+			return movement
+		states.LEDGE_JUMP:
+			if jump_pressed: movement.y = - 1.0
+			jump_pressed = false
+			current_up_speed = jump_speed
+			movement.x = last_ledge.get_enter_vector().x * - 1.0
+			return movement
+		states.HIDING:
+			movement.x = get_x_movement()
+			movement = check_jump_input(movement)
 			return movement
 	return Vector2.ZERO
 
@@ -257,12 +335,14 @@ func enter_crouch_state():
 
 func exit_crouch_state():
 	if is_running:
-		current_speed = run_speed
+		set_speed(run_speed)
 	else: 
-		current_speed = speed
+		set_speed(speed)
 	set_movement_state()
 
 func enter_on_ledge_state():
+	can_jump = true
+	jump_pressed = false
 	set_state(states.ON_LEDGE, actualState)
 	velocity = Vector2.ZERO
 
@@ -275,30 +355,32 @@ func enter_jump_state(movement):
 	prior_speed = current_speed
 	current_up_speed = jump_speed
 	jumpTimer.start()
-	enable_ray_casts(true)
+	enable_ray_casts(movement if movement.x != 0 else facing, true)
 	return movement
 
 func exit_jump_state():
-	if velocity.y > 0: enter_falling_state()
+	if velocity.y > 0: 
+		enter_falling_state()
+		jump_pressed = false
 
 func enter_falling_state():
 	set_state(states.FALLING, actualState)
-	enable_ray_casts(true)
+	enable_ray_casts(facing, true)
 
 func exit_falling_state():
 	if is_on_floor():
-		current_speed = prior_speed
+		set_speed(prior_speed)
 		jump_direction = null
 		can_grab_ledge = false
 		enter_idle_state()
-		enable_ray_casts(false)
-		if last_wall: can_wallrun_check(last_wall)
+		enable_ray_casts(facing, false)
 
 func enter_climb_state(state):
 	current_up_speed = climb_speed
 	set_state(state, actualState)
 	is_going_to_climb = true
 	last_ladder.set_platform_collision(false)
+	move_to_ladder()
 
 func exit_climb_state():
 	if is_on_floor():
@@ -312,62 +394,158 @@ func enter_wallrun_state():
 func exit_wallrun_state():
 	if velocity.y > 0: enter_falling_state()
 
-func enter_wall_jump_state(movement):
-	set_state(states.WALL_JUMPING, actualState)
-	movement.x = last_wall.get_climbable_vector().x
+func enter_climb_ledge_state():
+	set_state(states.CLIMBING_LEDGE, actualState)
+
+func exit_climb_ledge_state():
+	enter_idle_state()
+
+func enter_ledge_jump_state(movement):
+	set_state(states.LEDGE_JUMP, actualState)
+	movement.x = last_ledge.get_enter_vector().x * -1.0
 	jump_direction = movement.x
 	movement.y = - 1.0
 	can_jump = false
 	prior_speed = current_speed
+	current_up_speed = jump_speed
+	jumpTimer.start()
+	set_facing()
+	enable_ray_casts(movement,true)
+	return movement
+
+func exit_ledge_jump_state():
+	if velocity.y > 0:
+		enter_falling_state()
+
+func enter_wall_jump_state(movement):
+	set_state(states.WALL_JUMPING, actualState)
+	movement.x = last_wall.get_enter_vector().x * -1.0
+	jump_direction = movement.x
+	movement.y = - 1.0
+	can_jump = false
+	jump_pressed = false
+	prior_speed = current_speed
 	current_up_speed = wall_jump_speed
 	jumpTimer.start()
 	set_facing()
+	enable_ray_casts(movement, true)
 	return movement
+
+func enter_hiding_state():
+	is_going_to_hide = false
+	can_hide = false
+	set_speed(crouch_speed)
+	set_state(states.HIDING, actualState)
+
+func exit_hiding_state():
+	if z_index != 1: tween_fade(fade_type.IN)
+	can_hide = true
+	z_index = 1
+	if priorState == states.CROUCHED or priorState == states.CROUCH_WALK:
+		enter_crouch_state()
+	else: 
+		if is_running:
+			set_speed(run_speed)
+		else: 
+			set_speed(speed)
+		set_movement_state()
 
 func is_stationary():
 	return true if velocity == Vector2.ZERO else false
 
 func is_on_ledge():
 	if can_grab_ledge and bottomLeftRC.is_colliding() and !topLeftRC.is_colliding():
-		print("Ledge à esquerda")
+		is_going_to_ledge = true
 		return true
-
 	if can_grab_ledge and bottomRightRC.is_colliding() and !topRightRC.is_colliding():
-		print("Ledge à direita")
+		is_going_to_ledge = true
 		return true
-	
 	return false
+
+func move_to_ledge():
+	if is_on_ledge() and can_grab_ledge and is_going_to_ledge:
+		can_grab_ledge = false
+		tween_position(Vector2(get_area_offset_position(last_ledge,sprite_size/2),position.y),0.1)
+
+func get_area_offset_position(area, offset = 0):
+	return area.get_global_position().x + (offset * facing.x * -1)
+
+func move_to_wall():
+	tween_position(Vector2(get_area_offset_position(last_wall),position.y),0.1)
 
 func move_to_ladder():
 	if is_going_to_climb and position.x != last_ladder.position.x:
-		tween.interpolate_property(self,"position",Vector2(position.x,position.y),Vector2(last_ladder.position.x,position.y),0.1,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
-		tween.start()
+		tween_position(Vector2(last_ladder.position.x,position.y),0.2)
 	else: is_going_to_climb = false
+
+func move_over_ledge():
+	enter_climb_ledge_state()
+	tween_position(Vector2(position.x,last_ledge.get_global_position().y),0.3)
+
+func move_to_hide():
+	z_index = last_hideout.get_area_z_index()
+	is_going_to_hide = true
+	if !last_hideout.can_move:
+		tween_position(Vector2(last_hideout.position.x,position.y),0.2)
+		tween_fade(fade_type.OUT)
+	elif position.x < last_hideout.get_left_point():
+		tween_position(Vector2(last_hideout.get_left_point() + sprite_size/1.5,position.y),0.2)
+		tween_fade(fade_type.OUT)
+	elif position.x > last_hideout.get_right_point():
+		tween_position(Vector2(last_hideout.get_right_point() - sprite_size/1.5,position.y),0.2)
+		tween_fade(fade_type.OUT)
+	else:
+		tween_fade(fade_type.OUT)
+		can_jump = false
+		animationPlayer.play("jump_to_hide")
+
+func _unhandled_input(event):
+	check_shoot_input(event)
+	check_melee_input(event)
+	check_climb_input(event)
+	check_speed_input(event)
+	check_crouch_input(event)
+	check_interact_input(event)
+
+func check_interact_input(event):
+	if event.is_action_pressed("interact"):
+		if can_hide: move_to_hide()
+		if actualState == states.HIDING: exit_hiding_state()
 
 func check_jump_input(movement = Vector2.ZERO):
 	if Input.is_action_pressed("jump") and can_jump:
 		if actualState == states.WALL_RUNNING:
 			movement = enter_wall_jump_state(movement)
-		else:
-			movement = enter_jump_state(movement)
+		elif actualState == states.ON_LEDGE:
+			movement = enter_ledge_jump_state(movement)
+		elif is_on_floor() or actualState == states.CLIMBING_DOWN or actualState == states.CLIMBING_UP: 
+				movement = enter_jump_state(movement)
+		jump_pressed = true
 	return movement
 
-func check_climb_input():
-	if can_climb and Input.is_action_just_pressed("climb_up"):
-		enter_climb_state(states.CLIMBING_UP)
-		last_ladder.set_platform_collision(true)
-	elif can_climb and Input.is_action_just_pressed("climb_down"):
-		if actualState == states.CLIMBING_DOWN and !tapTimer.is_stopped(): slide_down = true
-		tapTimer.start()
-		enter_climb_state(states.CLIMBING_DOWN)
-	elif can_wallrun and Input.is_action_just_pressed("climb_up"):
-		enter_wallrun_state()
-	elif actualState == states.ON_LEDGE and Input.is_action_just_pressed("climb_down"):
-		can_grab_ledge = false
-		enter_falling_state()
+func check_climb_input(event):
+	if event.is_action_pressed("climb_up"):
+		if can_climb:
+			enter_climb_state(states.CLIMBING_UP)
+			last_ladder.set_platform_collision(true)
+		elif actualState == states.ON_LEDGE:
+			climbing_ledge = true
+			move_over_ledge()
+		elif can_wallrun_check(last_wall):
+			is_going_to_climb = true
+			move_to_wall()
+	
+	if event.is_action_pressed("climb_down"):
+		if can_climb:
+			if actualState == states.CLIMBING_DOWN and !tapTimer.is_stopped(): slide_down = true
+			tapTimer.start()
+			enter_climb_state(states.CLIMBING_DOWN)
+		elif actualState == states.ON_LEDGE:
+			can_grab_ledge = false
+			enter_falling_state()
 
-func check_speed_input():
-	if Input.is_action_just_pressed("dash") and is_on_floor() and actualState != states.CROUCHED:
+func check_speed_input(event):
+	if event.is_action_pressed("dash") and is_on_floor() and actualState != states.CROUCHED:
 		if actualState == states.CROUCH_WALK:
 			exit_crouch_state()
 		else:
@@ -380,16 +558,16 @@ func check_speed_input():
 				current_speed = run_speed
 				set_movement_state()
 
-func check_crouch_input():
-	if Input.is_action_just_pressed("crouch") and is_on_floor() and actualState != states.JUMPING and actualState != states.FALLING and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP and actualState != states.WALL_JUMPING and actualState != states.WALL_RUNNING:
+func check_crouch_input(event):
+	if event.is_action_pressed("crouch") and is_on_floor() and actualState != states.JUMPING and actualState != states.FALLING and actualState != states.CLIMBING_DOWN and actualState != states.CLIMBING_UP and actualState != states.WALL_JUMPING and actualState != states.WALL_RUNNING and actualState != states.HIDING:
 		if actualState == states.CROUCHED or actualState == states.CROUCH_WALK:
 			exit_crouch_state()
 		else: 
 			current_speed = crouch_speed
 			enter_crouch_state()
 
-func check_shoot_input():
-	if Input.is_action_just_pressed("shoot") and can_shoot:
+func check_shoot_input(event):
+	if event.is_action_pressed("shoot") and can_shoot:
 		can_shoot = false
 		var projectile_instance = projectile.instance()
 		projectile_instance.position = castPoint.get_global_transform().get_origin()
@@ -399,26 +577,28 @@ func check_shoot_input():
 		yield(get_tree().create_timer(rate_of_fire),"timeout")
 		can_shoot = true
 
-func check_melee_input():
-	if Input.is_action_just_pressed("slash") and can_attack:
+func check_melee_input(event):
+	if event.is_action_pressed("slash") and can_attack:
 		can_attack = false
 		animationPlayer.play("meleeSlash")
 
 func can_wallrun_check(area):
 	can_wallrun = false
-	if is_on_floor() and facing == Vector2.LEFT and area.get_climbable_vector() == Vector2.RIGHT and position.x >= area.get_global_position().x:
+	if is_on_floor() and facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area):
 			can_wallrun = true
 			last_wall = area
-	if is_on_floor() and facing == Vector2.RIGHT and area.get_climbable_vector() == Vector2.LEFT and position.x <= area.get_global_position().x:
+	if is_on_floor() and facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area):
 			can_wallrun = true
 			last_wall = area
+	return can_wallrun
 
 func can_grab_check(area):
 	can_grab_ledge = false
-	if facing == Vector2.LEFT and area.get_climbable_vector() == Vector2.RIGHT and position.x >= area.get_global_position().x:
+	if facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area,sprite_size/2):
 			can_grab_ledge = true
-	if facing == Vector2.RIGHT and area.get_climbable_vector() == Vector2.LEFT and position.x <= area.get_global_position().x:
+	if facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area,sprite_size/2):
 			can_grab_ledge = true
+	last_ledge = area
 
 func set_cast_point_side():
 	if facing == Vector2.RIGHT:
@@ -432,6 +612,19 @@ func set_cast_point_side():
 		meleeSprite.flip_h = true
 		meleeSprite.flip_v = true
 
+func tween_position(new_position,time):
+	tween.interpolate_property(self,"position",Vector2(position.x,position.y),new_position,time,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
+	tween.start()
+
+func tween_fade(fade):
+	var fade_in = Color(1.0,1.0,1.0,1.0)
+	var fade_out = Color(0.33,0.33,0.33,1.0)
+	if fade == fade_type.IN:
+		fadeTween.interpolate_property(self,"modulate",fade_out,fade_in,0.3,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
+	else:
+		fadeTween.interpolate_property(self,"modulate",fade_in,fade_out,0.3,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
+	fadeTween.start()
+
 func on_hit():
 	print("Foi atingido!")
 
@@ -442,12 +635,16 @@ func set_facing():
 		facing = Vector2.RIGHT
 	set_cast_point_side()
 
-func enable_ray_casts(value):
+func set_speed(new_speed):
+	prior_speed = current_speed
+	current_speed = new_speed
+
+func enable_ray_casts(dir, value):
 	if value:
-		if facing == Vector2.LEFT:
+		if dir.x < 0:
 			bottomLeftRC.enabled = value
 			topLeftRC.enabled = value
-		elif facing == Vector2.RIGHT:
+		elif dir.x > 0:
 			bottomRightRC.enabled = value
 			topRightRC.enabled = value
 	else:
@@ -456,6 +653,7 @@ func enable_ray_casts(value):
 		bottomRightRC.enabled = value
 		topRightRC.enabled = value
 
+# DEV ONLY
 func print_state(state):
 	match state:
 		states.IDLE:
@@ -482,3 +680,4 @@ func print_state(state):
 			print("WALL_JUMPING")
 		states.ON_LEDGE:
 			print("ON_LEDGE")
+

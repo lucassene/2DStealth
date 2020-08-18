@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=2]
 
-[ext_resource path="res://src/utils/scripts/ClimbableArea.gd" type="Script" id=1]
+[ext_resource path="res://src/utils/scripts/TriggerArea.gd" type="Script" id=1]
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 48, 6 )
@@ -26,7 +26,7 @@ one_way_collision = true
 monitoring = false
 collision_layer = 16
 script = ExtResource( 1 )
-climbable_side = Vector2( -1, 0 )
+enter_side = Vector2( 1, 0 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="leftLedge"]
 position = Vector2( 0, 6 )
@@ -39,7 +39,7 @@ position = Vector2( 96, 0 )
 monitoring = false
 collision_layer = 16
 script = ExtResource( 1 )
-climbable_side = Vector2( 1, 0 )
+enter_side = Vector2( -1, 0 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="rightLedge"]
 position = Vector2( 0, 6 )

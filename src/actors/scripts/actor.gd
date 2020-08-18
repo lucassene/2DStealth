@@ -9,13 +9,17 @@ export var max_speed = 800.0
 export var crouch_speed = 200
 export var climb_speed = 250.0
 export var jump_time = 0.6
-export var jump_speed = 1000.0
+export var jump_speed = 1150.0
 export var gravity = 3200.0
 export var max_gspeed = 4000.0
 
 const FLOOR_NORMAL = Vector2.UP
+const SNAP_DIRECTION = Vector2.DOWN
+const SNAP_LENGTH = 32.0
+const SLOPE_THRESHOLD = deg2rad(46)
 
 var velocity = Vector2.ZERO
+var snap_vector = SNAP_DIRECTION * SNAP_LENGTH
 
 var actualState
 var priorState
