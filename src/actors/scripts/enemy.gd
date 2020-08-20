@@ -7,6 +7,7 @@ onready var dangerSprite = $dangerSprite
 onready var alertTimer = $alertTimer
 onready var castOrigin: Position2D = $castOrigin
 onready var castPoint : Position2D = $castOrigin/castPoint
+onready var fieldOfView : Area2D = $castOrigin/fieldOfView
 onready var leftBorder: RayCast2D = $leftBorder
 onready var rightBorder: RayCast2D = $rightBorder
 onready var bottomRightRC: RayCast2D = $bottomRightRC
@@ -14,6 +15,7 @@ onready var bottomLeftRC: RayCast2D = $bottomLeftRC
 onready var topRightRC: RayCast2D = $topRightRC
 onready var topLeftRC: RayCast2D = $topLeftRC
 onready var waypoints = get_node(waypoints_path)
+onready var tween = $Tween
 
 onready var label = $Label
 
@@ -71,9 +73,10 @@ func _process(_delta):
 func _on_fieldOfView_body_entered(body):
 	if body.is_in_group("Player"):
 		if !player: player = body
-		match actualState:
-			states.PATROLLING, states.IDLE, states.SEARCHING:
-				enter_fight_state()
+		if !player.is_hidden():
+			match actualState:
+				states.PATROLLING, states.IDLE, states.SEARCHING:
+					enter_fight_state()
 
 func _on_fieldOfView_body_exited(body):
 	if body.is_in_group("Player"):
@@ -121,13 +124,13 @@ func _physics_process(delta):
 	if is_on_floor() and can_jump(): jump()
 	match(actualState):
 		states.IDLE, states.PATROLLING:
-			go_to_position(waypoint_position, delta)
+			get_direction(waypoint_position, delta)
 		states.SEARCHING:
-			go_to_position(last_player_position, delta)
+			get_direction(last_player_position, delta)
 		states.FIGHTING:
-			go_to_position(player.position, delta)
+			get_direction(player.position, delta)
 
-func go_to_position(target_position, delta):
+func get_direction(target_position, delta):
 	match(actualState):
 		states.FIGHTING:
 			set_facing(target_position,chase_offset)
@@ -150,10 +153,13 @@ func go_to_position(target_position, delta):
 				set_physics_process(false)
 			else: dir = next_dir
 
-	velocity.x = dir * current_speed
-	velocity.y += clamp(gravity * delta,0.0,max_gspeed)
-	velocity = move_and_slide(velocity,FLOOR_NORMAL)
+	move(delta)
 
+func move(delta, vector = snap_vector):
+	velocity.x = dir * current_speed
+	velocity.y += clamp(gravity * delta,-1.0,max_gspeed)
+	velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
+	
 func can_jump():
 	match(facing):
 		Vector2.LEFT:
@@ -179,9 +185,9 @@ func has_wall():
 	return false	
 
 func jump():
-	velocity.x = facing.x * current_speed
+	dir = facing.x
 	velocity.y = - 1.0 * jump_speed
-	velocity = move_and_slide(velocity,FLOOR_NORMAL)
+	velocity = move_and_slide_with_snap(velocity, Vector2.ZERO, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
 
 func play_animation(anim):
 	if facing == Vector2.RIGHT:
@@ -214,7 +220,7 @@ func check_movement(target_position, delta):
 	var distance_to_target = position.distance_to(target_position)
 	return true if motion.length() > distance_to_target else false
 
-func start_chase(delta):
+func start_chase(delta):	
 	if player.position.x < position.x - chase_offset:
 		set_chase_direction(-1)
 	elif player.position.x > position.x + chase_offset:
@@ -224,11 +230,15 @@ func start_chase(delta):
 	
 	if OS.get_ticks_msec() > next_dir_time:
 		dir = next_dir
-	
-	velocity.x = dir * current_speed
-	
-	velocity.y += clamp(gravity * delta,0.0,max_gspeed)
-	velocity = move_and_slide(velocity,FLOOR_NORMAL)
+		
+	move(delta)
+
+func set_fov_size(size):
+	if size == Vector2.ONE:
+		tween.interpolate_property(fieldOfView,"scale",fieldOfView.get_scale(),size,0.5,Tween.TRANS_LINEAR,Tween.EASE_IN_OUT)
+		tween.start()
+	else:
+		fieldOfView.set_scale(size)
 
 func turn():
 	velocity.x *= -1.0
@@ -241,6 +251,7 @@ func turn():
 	yield(get_tree().create_timer(1.0),"timeout")
 
 func enter_patrol_state():
+	set_fov_size(Vector2.ONE)
 	dangerSprite.visible = false
 	warningSprite.visible = false
 	animationPlayer.playback_speed = 1
@@ -257,6 +268,7 @@ func enter_search_state():
 	actualState = states.SEARCHING
 
 func enter_fight_state():
+	set_fov_size(Vector2(3.0,2.0))
 	warningSprite.visible = false
 	dangerSprite.visible = true
 	animationPlayer.stop()

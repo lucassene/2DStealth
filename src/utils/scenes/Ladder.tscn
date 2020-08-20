@@ -4,7 +4,7 @@
 [ext_resource path="res://src/utils/scripts/Ladder.gd" type="Script" id=2]
 
 [sub_resource type="RectangleShape2D" id=1]
-extents = Vector2( 12, 48 )
+extents = Vector2( 30, 48 )
 
 [node name="Ladder" type="Area2D" groups=[
 "Climbable",

@@ -20,17 +20,17 @@ height = 96.0
 radius = 50.0
 height = 80.0
 
-[sub_resource type="RectangleShape2D" id=3]
-extents = Vector2( 156, 98 )
+[sub_resource type="ConvexPolygonShape2D" id=5]
+points = PoolVector2Array( 0, 0, 265, -150, 265, 150 )
 
 [sub_resource type="ConvexPolygonShape2D" id=4]
-points = PoolVector2Array( 0, -144, 900, -450, 900, 150 )
+points = PoolVector2Array( 0, -144, 800, -450, 800, 164 )
 
 [node name="Enemy" type="KinematicBody2D" groups=[
 "Enemy",
 ]]
 collision_layer = 2
-collision_mask = 5
+collision_mask = 12
 script = ExtResource( 2 )
 speed = 200.0
 
@@ -63,15 +63,15 @@ position = Vector2( 0, -144 )
 position = Vector2( 64, 0 )
 
 [node name="fieldOfView" type="Area2D" parent="castOrigin"]
-position = Vector2( 196, 0 )
+position = Vector2( 48, 0 )
 monitorable = false
 collision_layer = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="castOrigin/fieldOfView"]
-position = Vector2( -36, 0 )
-shape = SubResource( 3 )
+shape = SubResource( 5 )
 
 [node name="Sprite" type="Sprite" parent="castOrigin/fieldOfView"]
+position = Vector2( 140.015, 0 )
 texture = ExtResource( 3 )
 
 [node name="sight" type="Area2D" parent="castOrigin"]
@@ -80,7 +80,7 @@ collision_layer = 4
 collision_mask = 5
 
 [node name="sightRange" type="CollisionShape2D" parent="castOrigin/sight"]
-position = Vector2( 56, 96 )
+position = Vector2( 50, 96 )
 shape = SubResource( 4 )
 
 [node name="warningSprite" type="Sprite" parent="."]
@@ -150,6 +150,8 @@ align = 1
 __meta__ = {
 "_edit_use_anchors_": false
 }
+
+[node name="Tween" type="Tween" parent="."]
 [connection signal="body_entered" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_entered"]
 [connection signal="body_exited" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_exited"]
 [connection signal="body_entered" from="castOrigin/sight" to="." method="_on_sight_body_entered"]

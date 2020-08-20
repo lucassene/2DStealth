@@ -20,8 +20,7 @@ extents = Vector2( 52, 100 )
 [node name="Player" type="KinematicBody2D" groups=[
 "Player",
 ]]
-z_index = 1
-collision_mask = 20
+collision_mask = 22
 script = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
@@ -85,7 +84,7 @@ texture = ExtResource( 3 )
 anims/jump_to_hide = ExtResource( 5 )
 anims/meleeSlash = ExtResource( 4 )
 
-[node name="Tween" type="Tween" parent="."]
+[node name="PositionTween" type="Tween" parent="."]
 
 [node name="Label" type="Label" parent="."]
 anchor_left = 0.5
@@ -130,9 +129,11 @@ cast_to = Vector2( -60, 0 )
 collision_mask = 16
 
 [node name="FadeTween" type="Tween" parent="."]
+
+[node name="CameraTween" type="Tween" parent="."]
 [connection signal="area_entered" from="playerArea" to="." method="_on_PlayerArea_area_entered"]
 [connection signal="area_exited" from="playerArea" to="." method="_on_playerArea_area_exited"]
 [connection signal="body_entered" from="meleeArea" to="." method="_on_meleeArea_body_entered"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
-[connection signal="tween_completed" from="Tween" to="." method="_on_Tween_completed"]
+[connection signal="tween_completed" from="PositionTween" to="." method="_on_PositionTween_completed"]
 [connection signal="timeout" from="jumpTimer" to="." method="_on_jumpTimer_timeout"]
