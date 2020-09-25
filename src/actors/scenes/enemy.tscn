@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=2]
+[gd_scene load_steps=14 format=2]
 
 [ext_resource path="res://assets/enemy.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/enemy.gd" type="Script" id=2]
@@ -20,12 +20,6 @@ height = 96.0
 radius = 50.0
 height = 80.0
 
-[sub_resource type="ConvexPolygonShape2D" id=5]
-points = PoolVector2Array( 0, 0, 265, -150, 265, 150 )
-
-[sub_resource type="ConvexPolygonShape2D" id=4]
-points = PoolVector2Array( 0, -144, 800, -450, 800, 164 )
-
 [node name="Enemy" type="KinematicBody2D" groups=[
 "Enemy",
 ]]
@@ -44,7 +38,7 @@ z_index = 1
 shape = SubResource( 1 )
 
 [node name="VisibilityEnabler2D" type="VisibilityEnabler2D" parent="."]
-position = Vector2( 3.05176e-05, -120 )
+position = Vector2( -3.63798e-12, -121 )
 scale = Vector2( 80, 12 )
 
 [node name="PlayerDetector" type="Area2D" parent="." groups=[
@@ -62,26 +56,19 @@ position = Vector2( 0, -144 )
 [node name="castPoint" type="Position2D" parent="castOrigin"]
 position = Vector2( 64, 0 )
 
-[node name="fieldOfView" type="Area2D" parent="castOrigin"]
+[node name="fieldOfView" type="Area2D" parent="castOrigin" groups=[
+"EnemySight",
+]]
 position = Vector2( 48, 0 )
-monitorable = false
 collision_layer = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="castOrigin/fieldOfView"]
-shape = SubResource( 5 )
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="castOrigin/fieldOfView"]
+polygon = PoolVector2Array( 0, 0, 400, -200, 400, 200 )
 
 [node name="Sprite" type="Sprite" parent="castOrigin/fieldOfView"]
-position = Vector2( 140.015, 0 )
+position = Vector2( 210, 0.5 )
+scale = Vector2( 1.5, 1.4 )
 texture = ExtResource( 3 )
-
-[node name="sight" type="Area2D" parent="castOrigin"]
-position = Vector2( 0, 48 )
-collision_layer = 4
-collision_mask = 5
-
-[node name="sightRange" type="CollisionShape2D" parent="castOrigin/sight"]
-position = Vector2( 50, 96 )
-shape = SubResource( 4 )
 
 [node name="warningSprite" type="Sprite" parent="."]
 visible = false
@@ -152,9 +139,8 @@ __meta__ = {
 }
 
 [node name="Tween" type="Tween" parent="."]
+[connection signal="body_entered" from="PlayerDetector" to="." method="_on_PlayerDetector_body_entered"]
 [connection signal="body_entered" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_entered"]
 [connection signal="body_exited" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_exited"]
-[connection signal="body_entered" from="castOrigin/sight" to="." method="_on_sight_body_entered"]
-[connection signal="body_exited" from="castOrigin/sight" to="." method="_on_sight_body_exited"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
 [connection signal="timeout" from="alertTimer" to="." method="_on_Timer_timeout"]

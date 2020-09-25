@@ -1,10 +1,24 @@
-[gd_scene load_steps=9 format=2]
+[gd_scene load_steps=24 format=2]
 
 [ext_resource path="res://assets/player.png" type="Texture" id=1]
-[ext_resource path="res://src/actors/scripts/player.gd" type="Script" id=2]
+[ext_resource path="res://src/actors/scripts/Player/player.gd" type="Script" id=2]
 [ext_resource path="res://assets/slash.png" type="Texture" id=3]
 [ext_resource path="res://src/animations/meleeSlash.tres" type="Animation" id=4]
 [ext_resource path="res://src/animations/jump_to_hide.tres" type="Animation" id=5]
+[ext_resource path="res://assets/sound-cue.png" type="Texture" id=6]
+[ext_resource path="res://src/actors/scripts/Player/States/Idle.gd" type="Script" id=7]
+[ext_resource path="res://src/actors/scripts/Player/PlayerFSM.gd" type="Script" id=8]
+[ext_resource path="res://src/actors/scripts/Player/States/Running.gd" type="Script" id=9]
+[ext_resource path="res://src/actors/scripts/Player/States/Walking.gd" type="Script" id=10]
+[ext_resource path="res://src/actors/scripts/Player/States/Crouch.gd" type="Script" id=11]
+[ext_resource path="res://src/actors/scripts/Player/States/Crouch_Walk.gd" type="Script" id=12]
+[ext_resource path="res://src/actors/scripts/Player/States/Jumping.gd" type="Script" id=13]
+[ext_resource path="res://src/actors/scripts/Player/States/Falling.gd" type="Script" id=14]
+[ext_resource path="res://src/actors/scripts/Player/States/Climbing.gd" type="Script" id=15]
+[ext_resource path="res://src/actors/scripts/Player/States/Wall_Run.gd" type="Script" id=16]
+[ext_resource path="res://src/actors/scripts/Player/States/On_Ledge.gd" type="Script" id=17]
+[ext_resource path="res://src/actors/scripts/Player/States/Hiding.gd" type="Script" id=18]
+[ext_resource path="res://src/actors/scripts/Player/PlayerController.gd" type="Script" id=19]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 44.0
@@ -17,9 +31,13 @@ height = 104.0
 [sub_resource type="RectangleShape2D" id=3]
 extents = Vector2( 52, 100 )
 
+[sub_resource type="CircleShape2D" id=4]
+radius = 195.0
+
 [node name="Player" type="KinematicBody2D" groups=[
 "Player",
 ]]
+z_index = 1
 collision_mask = 22
 script = ExtResource( 2 )
 
@@ -54,38 +72,6 @@ position = Vector2( 0, -144 )
 [node name="castPoint" type="Position2D" parent="castOrigin"]
 position = Vector2( 64, 0 )
 
-[node name="playerArea" type="Area2D" parent="."]
-position = Vector2( 0, 2 )
-monitorable = false
-collision_layer = 0
-collision_mask = 22
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="playerArea"]
-modulate = Color( 0.541176, 0.0588235, 0.937255, 1 )
-position = Vector2( 1, -94 )
-shape = SubResource( 2 )
-
-[node name="meleeArea" type="Area2D" parent="."]
-position = Vector2( -96, -96 )
-monitorable = false
-collision_mask = 2
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="meleeArea"]
-position = Vector2( 0, -4 )
-shape = SubResource( 3 )
-disabled = true
-
-[node name="meleeSlash" type="Sprite" parent="meleeArea"]
-visible = false
-position = Vector2( 0, -24 )
-texture = ExtResource( 3 )
-
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-anims/jump_to_hide = ExtResource( 5 )
-anims/meleeSlash = ExtResource( 4 )
-
-[node name="PositionTween" type="Tween" parent="."]
-
 [node name="Label" type="Label" parent="."]
 anchor_left = 0.5
 anchor_top = 0.5
@@ -101,39 +87,146 @@ __meta__ = {
 "_edit_use_anchors_": true
 }
 
-[node name="jumpTimer" type="Timer" parent="."]
-one_shot = true
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/jump_to_hide = ExtResource( 5 )
+anims/meleeSlash = ExtResource( 4 )
 
-[node name="tapTimer" type="Timer" parent="."]
-wait_time = 0.5
-one_shot = true
+[node name="Areas" type="Node2D" parent="."]
 
-[node name="bottomRightRC" type="RayCast2D" parent="."]
+[node name="playerArea" type="Area2D" parent="Areas"]
+position = Vector2( 0, 2 )
+monitorable = false
+collision_mask = 22
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/playerArea"]
+modulate = Color( 0.541176, 0.0588235, 0.937255, 1 )
+position = Vector2( 1, -94 )
+shape = SubResource( 2 )
+
+[node name="meleeArea" type="Area2D" parent="Areas"]
+position = Vector2( -96, -96 )
+monitorable = false
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/meleeArea"]
+position = Vector2( 0, -4 )
+shape = SubResource( 3 )
+disabled = true
+
+[node name="meleeSlash" type="Sprite" parent="Areas/meleeArea"]
+visible = false
+position = Vector2( 0, -24 )
+texture = ExtResource( 3 )
+
+[node name="noiseArea" type="Area2D" parent="Areas" groups=[
+"SoundCue",
+]]
+visible = false
+position = Vector2( 0, -92 )
+z_index = -1
+monitoring = false
+collision_mask = 0
+
+[node name="noiseSprite" type="Sprite" parent="Areas/noiseArea"]
+texture = ExtResource( 6 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/noiseArea"]
+modulate = Color( 0.992157, 0.815686, 0.0156863, 1 )
+shape = SubResource( 4 )
+
+[node name="RayCasts" type="Node2D" parent="."]
+
+[node name="bottomRightRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 48, -96 )
 cast_to = Vector2( 20, 0 )
 collision_mask = 16
 
-[node name="bottomLeftRC2" type="RayCast2D" parent="."]
+[node name="bottomLeftRC2" type="RayCast2D" parent="RayCasts"]
 position = Vector2( -48, -96 )
 cast_to = Vector2( -20, 0 )
 collision_mask = 16
 
-[node name="topRightRC" type="RayCast2D" parent="."]
+[node name="topRightRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 36, -172 )
 cast_to = Vector2( 60, 0 )
 collision_mask = 16
 
-[node name="topLeftRC" type="RayCast2D" parent="."]
+[node name="topLeftRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( -36, -172 )
 cast_to = Vector2( -60, 0 )
 collision_mask = 16
 
-[node name="FadeTween" type="Tween" parent="."]
+[node name="Tweens" type="Node" parent="."]
 
-[node name="CameraTween" type="Tween" parent="."]
-[connection signal="area_entered" from="playerArea" to="." method="_on_PlayerArea_area_entered"]
-[connection signal="area_exited" from="playerArea" to="." method="_on_playerArea_area_exited"]
-[connection signal="body_entered" from="meleeArea" to="." method="_on_meleeArea_body_entered"]
+[node name="PositionTween" type="Tween" parent="Tweens"]
+
+[node name="FadeTween" type="Tween" parent="Tweens"]
+
+[node name="CameraTween" type="Tween" parent="Tweens"]
+
+[node name="NoiseTween" type="Tween" parent="Tweens"]
+
+[node name="Timers" type="Node" parent="."]
+
+[node name="noiseStepTimer" type="Timer" parent="Timers"]
+wait_time = 0.25
+
+[node name="StateMachine" type="Node" parent="."]
+script = ExtResource( 8 )
+
+[node name="PlayerController" type="Node" parent="StateMachine"]
+script = ExtResource( 19 )
+
+[node name="Idle" type="Node" parent="StateMachine"]
+script = ExtResource( 7 )
+
+[node name="Running" type="Node" parent="StateMachine"]
+script = ExtResource( 9 )
+
+[node name="Walking" type="Node" parent="StateMachine"]
+script = ExtResource( 10 )
+
+[node name="Crouch" type="Node" parent="StateMachine"]
+script = ExtResource( 11 )
+
+[node name="Crouch_Walk" type="Node" parent="StateMachine"]
+script = ExtResource( 12 )
+
+[node name="Jumping" type="Node" parent="StateMachine"]
+script = ExtResource( 13 )
+
+[node name="Falling" type="Node" parent="StateMachine"]
+script = ExtResource( 14 )
+
+[node name="Climbing" type="Node" parent="StateMachine"]
+script = ExtResource( 15 )
+
+[node name="Wall_Run" type="Node" parent="StateMachine"]
+script = ExtResource( 16 )
+
+[node name="On_Ledge" type="Node" parent="StateMachine"]
+script = ExtResource( 17 )
+
+[node name="Hiding" type="Node" parent="StateMachine"]
+script = ExtResource( 18 )
+
+[node name="Attacking" type="Node" parent="StateMachine"]
+
+[node name="Shooting" type="Node" parent="StateMachine"]
+[connection signal="on_hide" from="." to="StateMachine" method="_on_Player_hide"]
+[connection signal="on_hideout_entered" from="." to="StateMachine" method="_on_Player_on_hideout_entered"]
+[connection signal="on_hideout_exited" from="." to="StateMachine" method="_on_Player_on_hideout_exited"]
+[connection signal="on_ladder_entered" from="." to="StateMachine" method="_on_Player_on_ladder_entered"]
+[connection signal="on_ladder_exited" from="." to="StateMachine" method="_on_Player_on_ladder_exited"]
+[connection signal="on_ledge_entered" from="." to="StateMachine" method="_on_Player_on_ledge_entered"]
+[connection signal="on_ledge_exited" from="." to="StateMachine" method="_on_Player_on_ledge_exited"]
+[connection signal="on_wall_entered" from="." to="StateMachine" method="_on_Player_on_wall_entered"]
+[connection signal="on_wall_exited" from="." to="StateMachine" method="_on_Player_on_wall_exited"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
-[connection signal="tween_completed" from="PositionTween" to="." method="_on_PositionTween_completed"]
-[connection signal="timeout" from="jumpTimer" to="." method="_on_jumpTimer_timeout"]
+[connection signal="animation_started" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_started"]
+[connection signal="area_entered" from="Areas/playerArea" to="." method="_on_PlayerArea_area_entered"]
+[connection signal="area_exited" from="Areas/playerArea" to="." method="_on_PlayerArea_area_exited"]
+[connection signal="body_entered" from="Areas/meleeArea" to="." method="_on_meleeArea_body_entered"]
+[connection signal="tween_completed" from="Tweens/PositionTween" to="." method="_on_PositionTween_completed"]
+[connection signal="tween_completed" from="Tweens/NoiseTween" to="." method="_on_NoiseTween_tween_completed"]
+[connection signal="timeout" from="Timers/noiseStepTimer" to="." method="_on_noiseStepTimer_timeout"]

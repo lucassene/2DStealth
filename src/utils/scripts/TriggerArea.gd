@@ -29,7 +29,10 @@ export(layer) var z_layer = layer.BACKGROUND
 export(type) var area_type = type.PARKOUR_WALL
 export(traffic) var traffic_type = traffic.ENTRANCE
 export(physics_layer) var world_layer = physics_layer.WORLD_LAYER_0
-export var can_move = true
+export var can_move = true setget ,can_player_move
+
+func can_player_move():
+	return can_move
 
 func get_enter_vector():
 	return enter_side

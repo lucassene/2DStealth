@@ -17,7 +17,7 @@ tracks/0/keys = {
 "values": [ Vector2( 0, -96 ), Vector2( 8, -96 ), Vector2( 0, -96 ) ]
 }
 tracks/1/type = "value"
-tracks/1/path = NodePath("meleeArea/meleeSlash:visible")
+tracks/1/path = NodePath("Areas/meleeArea/meleeSlash:visible")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/imported = false
@@ -29,7 +29,7 @@ tracks/1/keys = {
 "values": [ false, true, false ]
 }
 tracks/2/type = "value"
-tracks/2/path = NodePath("meleeArea/CollisionShape2D:disabled")
+tracks/2/path = NodePath("Areas/meleeArea/CollisionShape2D:disabled")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/imported = false

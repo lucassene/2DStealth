@@ -23,7 +23,10 @@ export(Array, String) var idles
 export var reaction_time = 450
 export var chase_offset = 1000
 export var search_offset = 200
+export var looking_offset = 100
 export var search_speed = 300
+export var sight_size = Vector2.ONE
+export var fight_sight_size = Vector2(2.5,2.0)
 export var waypoints_path = NodePath()
 
 var dir = 0
@@ -34,19 +37,22 @@ var current_speed = speed
 enum states {
 	IDLE, 
 	PATROLLING, 
-	SEARCHING,
-	RETURNING, 
+	ALERTED,
+	SEARCHING, 
 	FIGHTING,
 }
 
+var player
+
 var facing = Vector2.LEFT
 var on_ledge = false
-var player
+var playerArea: Area2D
 var waypoint_position
 var last_player_position
 var is_player_in_sight = false
 
 func _ready():
+	set_fov_size(sight_size)
 	if !waypoints: return
 	position = waypoints.get_start_position()
 	waypoint_position = waypoints.get_next_point_position()
@@ -60,35 +66,55 @@ func _process(_delta):
 		states.PATROLLING:
 			label.text = "PATROLLING"
 			play_animation("patrol")
-		states.SEARCHING:
-			label.text = "SEARCHING"
+		states.ALERTED:
+			label.text = "ALERTED"
 			animationPlayer.playback_speed = 2
 			play_animation("patrol")
 		states.FIGHTING:
 			label.text = "FIGHTING"
 			castOrigin.rotation_degrees = (get_angle_to(player.get_global_transform().origin)/3.14)*180
-		states.RETURNING:
-			label.text = "RETURNING"
+		states.SEARCHING:
+			label.text = "SEARCHING"
 	
 func _on_fieldOfView_body_entered(body):
 	if body.is_in_group("Player"):
-		if !player: player = body
+		print("player in sight")
+		if !player: 
+			player = body
+			player.connect("on_hide",self,"on_player_hide")
+			player.connect("on_unhide",self,"on_player_unhide")
 		if !player.is_hidden():
+			is_player_in_sight = true
 			match actualState:
-				states.PATROLLING, states.IDLE, states.SEARCHING:
+				states.PATROLLING, states.IDLE, states.ALERTED:
 					enter_fight_state()
 
 func _on_fieldOfView_body_exited(body):
 	if body.is_in_group("Player"):
-		pass
+		is_player_in_sight = false
+		if actualState == states.FIGHTING:
+			alertTimer.start()
+
+func on_player_hide():
+	if !is_player_in_sight and actualState == states.FIGHTING: 
+		enter_searching_state()
+
+func on_player_unhide():
+	if fieldOfView.overlaps_body(player):
+		enter_fight_state()
+
+func _on_PlayerDetector_body_entered(body):
+	if body.is_in_group("Player"):
+		if !player: player = body
+		if !player.is_hidden(): enter_fight_state()
 
 func _on_Timer_timeout():
 	match(actualState):
-		states.SEARCHING:
+		states.ALERTED:
 			enter_patrol_state()
 		states.FIGHTING:
 			if not is_player_in_sight:
-				enter_search_state()
+				enter_alerted_state()
 				alertTimer.start()
 
 func _on_AnimationPlayer_animation_finished(anim_name):
@@ -107,25 +133,12 @@ func _on_AnimationPlayer_animation_finished(anim_name):
 			else:
 				enter_patrol_state()
 
-func _on_sight_body_entered(body):
-	if body.is_in_group("Player"):
-		is_player_in_sight = true
-		match(actualState):
-			states.SEARCHING:
-				enter_fight_state()
-	
-func _on_sight_body_exited(body):
-	if body.is_in_group("Player"):
-		is_player_in_sight = false
-		if actualState == states.FIGHTING:
-			alertTimer.start()
-	
 func _physics_process(delta):
 	if is_on_floor() and can_jump(): jump()
 	match(actualState):
 		states.IDLE, states.PATROLLING:
 			get_direction(waypoint_position, delta)
-		states.SEARCHING:
+		states.ALERTED, states.SEARCHING:
 			get_direction(last_player_position, delta)
 		states.FIGHTING:
 			get_direction(player.position, delta)
@@ -146,13 +159,19 @@ func get_direction(target_position, delta):
 				actualState = states.IDLE
 				play_animation(idles[waypoints.get_current_index()])
 			else: dir = next_dir
-		states.SEARCHING:
+		states.ALERTED:
 			set_facing(target_position,search_offset)
 			if check_movement(target_position,delta):
 				position = target_position
 				set_physics_process(false)
 			else: dir = next_dir
-
+		states.SEARCHING:
+			set_facing(target_position,looking_offset * facing.x)
+			if check_movement(target_position,delta):
+				position = target_position
+				enter_alerted_state()
+				alertTimer.start()
+			else: dir = next_dir
 	move(delta)
 
 func move(delta, vector = snap_vector):
@@ -251,7 +270,7 @@ func turn():
 	yield(get_tree().create_timer(1.0),"timeout")
 
 func enter_patrol_state():
-	set_fov_size(Vector2.ONE)
+	set_fov_size(sight_size)
 	dangerSprite.visible = false
 	warningSprite.visible = false
 	animationPlayer.playback_speed = 1
@@ -259,16 +278,25 @@ func enter_patrol_state():
 	actualState = states.PATROLLING
 	set_physics_process(true)
 
-func enter_search_state():
+func enter_alerted_state():
 	dangerSprite.visible = false
 	warningSprite.visible = true
 	var player_x = player.position.x + (search_offset * facing.x)
 	last_player_position = Vector2(player_x,position.y)
 	current_speed = search_speed
+	actualState = states.ALERTED
+
+func enter_searching_state():
+	warningSprite.visible = false
+	dangerSprite.visible = true
+	current_speed = run_speed
+	var player_x = player.position.x + (search_offset * facing.x)
+	last_player_position = Vector2(player_x,position.y)
+	current_speed = run_speed
 	actualState = states.SEARCHING
 
 func enter_fight_state():
-	set_fov_size(Vector2(3.0,2.0))
+	set_fov_size(fight_sight_size)
 	warningSprite.visible = false
 	dangerSprite.visible = true
 	animationPlayer.stop()
@@ -279,3 +307,4 @@ func enter_fight_state():
 func on_hit():
 	get_node("CollisionShape2D").set_deferred("disabled",true)
 	queue_free()
+
