@@ -1,6 +1,6 @@
 extends State
 
-onready var player_controller = get_node("../PlayerController")
+var player_controller
 
 export var SPEED = 200 setget ,get_speed
 
@@ -8,7 +8,9 @@ func get_speed():
 	return SPEED
 
 func enter(actor,_delta = 0.0):
+	player_controller = actor.get_player_controller()
 	actor.set_debug_text("CROUCH WALK")
+	state_machine.set_new_speed(SPEED)
 	actor.set_current_speed(SPEED)
 
 func handle_input(event):

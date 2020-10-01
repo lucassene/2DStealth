@@ -1,6 +1,6 @@
 extends State
 
-onready var player_controller = get_node("../PlayerController")
+var player_controller
 
 export var SPEED = 1150.0 setget ,get_speed
 export var FORCE = 0.25 setget ,get_force
@@ -20,6 +20,7 @@ func get_direction():
 	return direction
 
 func enter(actor, delta = 0.0):
+	player_controller = actor.get_player_controller()
 	actor.set_debug_text("JUMPING")
 	var movement = Vector2(0.0,-1.0)
 	if state_machine.get_previous_state() != "Wall_Run": 
@@ -37,6 +38,8 @@ func enter(actor, delta = 0.0):
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"climb_up","ladder_up"): return
 	if player_controller.check_input_pressed(event,"climb_down","ladder_down"): return
+	if player_controller.check_input_pressed(event,"dash","set_running_speed"): return
+	if player_controller.check_input_released(event,"dash","set_walking_speed"): return
 
 func update(actor,delta):
 	var movement = Vector2.ZERO

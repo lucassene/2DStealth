@@ -1,15 +1,20 @@
 extends State
 
-onready var player_controller = get_node("../PlayerController")
+var player_controller
 
 func enter(actor, _delta=0):
+	player_controller = actor.get_player_controller()
 	actor.set_debug_text("HIDING")
-	actor.set_current_speed(actor.states.Crouch_Walk.SPEED)
+	actor.set_current_speed(state_machine.states.Crouch_Walk.SPEED)
 
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"dash","enter_running"): return
 	if player_controller.check_input_pressed(event,"interact","exit_hide"): return
 	if player_controller.check_input_pressed(event,"climb_up","enter_wall_run"): return
+	if player_controller.check_input_pressed(event,"camera_focus_right","focus_camera_right"): return
+	if player_controller.check_input_pressed(event,"camera_focus_left","focus_camera_left"): return
+	if player_controller.check_input_released(event,"camera_focus_right","return_camera_position"): return
+	if player_controller.check_input_released(event,"camera_focus_left","return_camera_position"): return
 
 func update(actor,delta):
 	var dir = Vector2.ZERO

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=2]
+[gd_scene load_steps=15 format=2]
 
 [ext_resource path="res://assets/enemy.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/enemy.gd" type="Script" id=2]
@@ -11,6 +11,7 @@
 [ext_resource path="res://src/animations/turn_WtoE.tres" type="Animation" id=9]
 [ext_resource path="res://src/animations/smoking-idle-E.tres" type="Animation" id=10]
 [ext_resource path="res://src/animations/smoking-idle-W.tres" type="Animation" id=11]
+[ext_resource path="res://src/actors/scripts/Enemy/EnemyFSM.gd" type="Script" id=12]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 44.0
@@ -70,6 +71,17 @@ position = Vector2( 210, 0.5 )
 scale = Vector2( 1.5, 1.4 )
 texture = ExtResource( 3 )
 
+[node name="Label" type="Label" parent="."]
+margin_left = -81.3544
+margin_top = -222.655
+margin_right = -0.354431
+margin_bottom = -208.655
+rect_scale = Vector2( 2, 2 )
+align = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [node name="warningSprite" type="Sprite" parent="."]
 visible = false
 position = Vector2( 0, -256 )
@@ -93,52 +105,56 @@ anims/turn_W = ExtResource( 8 )
 wait_time = 10.0
 one_shot = true
 
-[node name="leftBorder" type="RayCast2D" parent="."]
+[node name="Tween" type="Tween" parent="."]
+
+[node name="RayCasts" type="Node2D" parent="."]
+
+[node name="leftBorder" type="RayCast2D" parent="RayCasts"]
 position = Vector2( -48, 0 )
 enabled = true
 collision_mask = 4
 
-[node name="rightBorder" type="RayCast2D" parent="."]
+[node name="rightBorder" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 50, 0 )
 enabled = true
 collision_mask = 4
 
-[node name="bottomRightRC" type="RayCast2D" parent="."]
+[node name="bottomRightRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 0, -56 )
 enabled = true
 cast_to = Vector2( 100, 0 )
 collision_mask = 4
 
-[node name="bottomLeftRC" type="RayCast2D" parent="."]
+[node name="bottomLeftRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 0, -56 )
 enabled = true
 cast_to = Vector2( -100, 0 )
 collision_mask = 4
 
-[node name="topRightRC" type="RayCast2D" parent="."]
+[node name="topRightRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 0, -128 )
 enabled = true
 cast_to = Vector2( 150, 0 )
 collision_mask = 4
 
-[node name="topLeftRC" type="RayCast2D" parent="."]
+[node name="topLeftRC" type="RayCast2D" parent="RayCasts"]
 position = Vector2( 0, -128 )
 enabled = true
 cast_to = Vector2( -150, 0 )
 collision_mask = 4
 
-[node name="Label" type="Label" parent="."]
-margin_left = -81.3544
-margin_top = -222.655
-margin_right = -0.354431
-margin_bottom = -208.655
-rect_scale = Vector2( 2, 2 )
-align = 1
-__meta__ = {
-"_edit_use_anchors_": false
-}
+[node name="StateMachine" type="Node" parent="."]
+script = ExtResource( 12 )
 
-[node name="Tween" type="Tween" parent="."]
+[node name="Idle" type="Node" parent="StateMachine"]
+
+[node name="Patrolling" type="Node" parent="StateMachine"]
+
+[node name="Alerted" type="Node" parent="StateMachine"]
+
+[node name="Searching" type="Node" parent="StateMachine"]
+
+[node name="Fighting" type="Node" parent="StateMachine"]
 [connection signal="body_entered" from="PlayerDetector" to="." method="_on_PlayerDetector_body_entered"]
 [connection signal="body_entered" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_entered"]
 [connection signal="body_exited" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_exited"]

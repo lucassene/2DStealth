@@ -1,8 +1,9 @@
 extends State
 
-onready var player_controller = get_node("../PlayerController")
+var player_controller
 
 func enter(actor, _delta = 0.0):
+	player_controller = actor.get_player_controller()
 	actor.set_debug_text("ON LEDGE")
 
 func handle_input(event):

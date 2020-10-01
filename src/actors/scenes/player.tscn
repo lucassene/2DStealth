@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=2]
+[gd_scene load_steps=26 format=2]
 
 [ext_resource path="res://assets/player.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/Player/player.gd" type="Script" id=2]
@@ -19,6 +19,8 @@
 [ext_resource path="res://src/actors/scripts/Player/States/On_Ledge.gd" type="Script" id=17]
 [ext_resource path="res://src/actors/scripts/Player/States/Hiding.gd" type="Script" id=18]
 [ext_resource path="res://src/actors/scripts/Player/PlayerController.gd" type="Script" id=19]
+[ext_resource path="res://src/actors/scripts/Player/States/Attacking.gd" type="Script" id=20]
+[ext_resource path="res://src/actors/scripts/Player/States/Shooting.gd" type="Script" id=21]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 44.0
@@ -171,11 +173,11 @@ collision_mask = 16
 [node name="noiseStepTimer" type="Timer" parent="Timers"]
 wait_time = 0.25
 
+[node name="PlayerController" type="Node" parent="."]
+script = ExtResource( 19 )
+
 [node name="StateMachine" type="Node" parent="."]
 script = ExtResource( 8 )
-
-[node name="PlayerController" type="Node" parent="StateMachine"]
-script = ExtResource( 19 )
 
 [node name="Idle" type="Node" parent="StateMachine"]
 script = ExtResource( 7 )
@@ -211,8 +213,11 @@ script = ExtResource( 17 )
 script = ExtResource( 18 )
 
 [node name="Attacking" type="Node" parent="StateMachine"]
+script = ExtResource( 20 )
 
 [node name="Shooting" type="Node" parent="StateMachine"]
+script = ExtResource( 21 )
+[connection signal="on_attack_ended" from="." to="StateMachine" method="_on_Player_on_attack_ended"]
 [connection signal="on_hide" from="." to="StateMachine" method="_on_Player_hide"]
 [connection signal="on_hideout_entered" from="." to="StateMachine" method="_on_Player_on_hideout_entered"]
 [connection signal="on_hideout_exited" from="." to="StateMachine" method="_on_Player_on_hideout_exited"]

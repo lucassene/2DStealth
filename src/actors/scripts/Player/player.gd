@@ -19,30 +19,14 @@ onready var topRightRC: RayCast2D = $RayCasts/topRightRC
 onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
 onready var sprite = $sprite
 onready var camera = $Camera2D
-onready var state_machine = $StateMachine
-onready var states = {
-	"Idle": $StateMachine/Idle,
-	"Running": $StateMachine/Running,
-	"Walking": $StateMachine/Walking,
-	"Crouch": $StateMachine/Crouch,
-	"Crouch_Walk": $StateMachine/Crouch_Walk,
-	"Jumping": $StateMachine/Jumping,
-	"Falling": $StateMachine/Falling,
-	"Climbing": $StateMachine/Climbing,
-	"Wall_Run": $StateMachine/Wall_Run,
-	"On_Ledge": $StateMachine/On_Ledge,
-	"Hiding": $StateMachine/Hiding,
-	"Attacking": $StateMachine/Attacking,
-	"Shooting": $StateMachine/Shooting
-}
+onready var state_machine = $StateMachine setget ,get_state_machine
+onready var player_controller = $PlayerController setget ,get_player_controller
 
 onready var label = $Label
-onready var current_speed = states.Walking.get_speed() setget set_current_speed, get_current_speed
-onready var previous_speed = current_speed setget set_previous_speed, get_previous_speed
-onready var current_y_speed = states.Jumping.get_speed() setget set_current_y_speed, get_current_y_speed
+onready var current_speed setget set_current_speed, get_current_speed
+onready var previous_speed setget set_previous_speed, get_previous_speed
+onready var current_y_speed setget set_current_y_speed, get_current_y_speed
 
-export var rate_of_fire = 0.5
-export var attack_speed = 0.3
 export var walk_noise = Vector2(0.5,0.5)
 export var walk_step = 0.5
 export var run_noise = Vector2(1.25,1.25)
@@ -61,6 +45,8 @@ signal on_hideout_entered(area)
 signal on_hideout_exited()
 signal on_hide()
 signal on_unhide()
+signal on_attack_ended()
+#signal on_shooting_ended()
 
 enum transition {
 	IN,
@@ -86,6 +72,12 @@ var facing = Vector2.RIGHT
 var sprite_size
 
 var in_enemy_sight = false
+
+func get_state_machine():
+	return state_machine
+
+func get_player_controller():
+	return player_controller
 
 func set_current_speed(new_value):
 	set_previous_speed(current_speed)
@@ -174,7 +166,7 @@ func _on_meleeArea_body_entered(body):
 func _on_AnimationPlayer_animation_finished(anim_name):
 	match anim_name:
 		"meleeSlash":
-			can_attack = true
+			emit_signal("on_attack_ended")
 		"jump_to_hide":
 			is_going_to_hide = false
 			if state_machine.get_current_state() == "Hiding" and is_going_to_unhide:
@@ -273,38 +265,20 @@ func move_to_hide(area):
 		animation_player.play("jump_to_hide")
 
 func _unhandled_input(event):
-	check_shoot_input(event)
-	check_melee_input(event)
-	check_camera_input(event)
 	state_machine.handle_input(event)
 
 func can_player_hide():
 	return true if !in_enemy_sight else false
 
-func check_shoot_input(event):
-	if event.is_action_pressed("shoot") and can_shoot:
-		can_shoot = false
-		var projectile_instance = projectile.instance()
-		projectile_instance.position = castPoint.get_global_transform().get_origin()
-		projectile_instance.shoot(castOrigin.rotation_degrees)
-		projectile_instance.origin = "Player"
-		get_parent().add_child(projectile_instance)
-		yield(get_tree().create_timer(rate_of_fire),"timeout")
-		can_shoot = true
+func make_melee_attack():
+	animation_player.play("meleeSlash")
 
-func check_melee_input(event):
-	if event.is_action_pressed("slash") and can_attack:
-		can_attack = false
-		animation_player.play("meleeSlash")
-
-func check_camera_input(event):
-	if state_machine.get_current_state() == "Hiding":
-		if event.is_action_pressed("camera_focus_right"):
-			tween_camera(transition.OUT, Vector2.RIGHT)
-		elif event.is_action_pressed("camera_focus_left"):
-			tween_camera(transition.OUT, Vector2.LEFT)
-		elif event.is_action_released("camera_focus_right") or event.is_action_released("camera_focus_left"):
-			tween_camera(transition.IN)
+func make_ranged_attack():
+	var projectile_instance = projectile.instance()
+	projectile_instance.position = castPoint.get_global_transform().get_origin()
+	projectile_instance.shoot(castOrigin.rotation_degrees)
+	projectile_instance.origin = "Player"
+	get_parent().add_child(projectile_instance)
 
 func change_layer():
 	change_layer_pressed = true

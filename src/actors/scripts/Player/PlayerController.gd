@@ -2,17 +2,20 @@ extends Node
 class_name PlayerController
 
 onready var actor = owner
-onready var state_machine = get_parent()
+onready var state_machine setget set_state_machine
+
+func set_state_machine(new_value):
+	state_machine = new_value
 
 func check_input_pressed(event,input,method = null,param = null):
 	if event.is_action_pressed(input):
-		call_deferred(method,param)
+		if method: call_deferred(method,param)
 		return true
 	return false
 
 func check_input_released(event,input,method = null,param = null):
 	if event.is_action_released(input):
-		call_deferred(method,param)
+		if method: call_deferred(method,param)
 		return true
 	return false
 
@@ -23,19 +26,20 @@ func enter_crouch_walk(_param):
 	state_machine.set_state("Crouch_Walk")
 
 func exit_crouch(_param):
+	actor.set_current_speed(actor.get_previous_speed())
 	state_machine.set_state("Idle")
 
 func jump(_param):
 	state_machine.set_state("Jumping")
 
 func set_running_speed(_param):
-	actor.set_current_speed(actor.states.Running.get_speed())
+	state_machine.set_new_speed(state_machine.states.Running.get_speed())
 
 func enter_running(_param):
 	state_machine.set_state("Running")
 
 func set_walking_speed(_param):
-	actor.set_current_speed(actor.states.Walking.get_speed())
+	state_machine.set_new_speed(state_machine.states.Walking.get_speed())
 
 func enter_walking(_param):
 	state_machine.set_state("Walking")
@@ -80,4 +84,19 @@ func on_key_up(_param):
 		return
 	if actor.can_change_layer:
 		actor.change_layer()
+
+func set_melee_attack(_param):
+	state_machine.set_melee_attack_state()
+
+func set_ranged_attack(_param):
+	state_machine.set_ranged_attack_state()
+
+func focus_camera_right(_param):
+	actor.tween_camera(actor.transition.OUT,Vector2.RIGHT)
+
+func focus_camera_left(_param):
+	actor.tween_camera(actor.transition.OUT,Vector2.LEFT)
+
+func return_camera_position(_param):
+	actor.tween_camera(actor.transition.IN)
 

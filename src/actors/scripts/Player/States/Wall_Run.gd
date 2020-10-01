@@ -1,10 +1,11 @@
 extends State
 
-onready var player_controller = get_node("../PlayerController")
-
 export var SPEED = 1800.0
 
+var player_controller
+
 func enter(actor, delta = 0.0):
+	player_controller = actor.get_player_controller()
 	actor.set_debug_text("WALL RUN")
 	var movement = Vector2(0.0,-1.0)
 	actor.set_current_y_speed(SPEED)
