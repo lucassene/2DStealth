@@ -21,8 +21,9 @@ func initialize(first_state):
 	states[current_state].enter(actor)
 
 func set_state(new_state):
-	previous_state = current_state
-	exit_state(current_state)
+	if current_state:
+		previous_state = current_state
+		exit_state(current_state)
 	current_state = new_state
 	enter_state(current_state)
 	
@@ -36,5 +37,5 @@ func handle_input(event):
 	states[current_state].handle_input(event)
 
 func update(delta):
-	states[current_state].update(actor,delta)
+	if current_state: states[current_state].update(actor,delta)
 

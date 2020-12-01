@@ -19,11 +19,13 @@ func enter(actor,delta = 0.0):
 	actor.move(delta,movement,Vector2.ZERO)
 
 func handle_input(event):
-	if player_controller.check_input_pressed(event,"climb_up","ladder_up"): return
+	if player_controller.check_input_pressed(event,"jump","jump"): return
+	if player_controller.check_input_pressed(event,"climb_up","on_key_up"): return
 	if player_controller.check_input_pressed(event,"climb_down","ladder_down"): return
+	if player_controller.check_input_pressed(event,"melee","set_melee_attack"): return
+	if player_controller.check_input_pressed(event,"shoot","set_ranged_attack"): return
 	if player_controller.check_input_pressed(event,"dash","set_running_speed"): return
 	if player_controller.check_input_released(event,"dash","set_walking_speed"): return
-
 
 func update(actor,delta):
 	var movement = Vector2.ZERO

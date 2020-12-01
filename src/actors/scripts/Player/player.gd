@@ -20,9 +20,11 @@ onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
 onready var sprite = $sprite
 onready var camera = $Camera2D
 onready var state_machine = $StateMachine setget ,get_state_machine
+onready var action_state_machine = $ActionStateMachine setget ,get_action_state_machine
 onready var player_controller = $PlayerController setget ,get_player_controller
 
 onready var label = $Label
+onready var actionLabel = $ActionLabel
 onready var current_speed setget set_current_speed, get_current_speed
 onready var previous_speed setget set_previous_speed, get_previous_speed
 onready var current_y_speed setget set_current_y_speed, get_current_y_speed
@@ -46,6 +48,7 @@ signal on_hideout_exited()
 signal on_hide()
 signal on_unhide()
 signal on_attack_ended()
+signal on_wall_jump_ready()
 #signal on_shooting_ended()
 
 enum transition {
@@ -76,6 +79,9 @@ var in_enemy_sight = false
 func get_state_machine():
 	return state_machine
 
+func get_action_state_machine():
+	return action_state_machine
+
 func get_player_controller():
 	return player_controller
 
@@ -99,11 +105,15 @@ func get_current_y_speed():
 	return current_y_speed
 
 func set_debug_text(text):
-	label.text = String(facing.x) + " | " + text	
+	label.text = String(facing.x) + " | " + text
+
+func set_action_text(text):
+	actionLabel.text = text
 
 func _ready():
 	sprite_size = sprite.get_texture().get_size().x
 	state_machine.initialize("Idle")
+	action_state_machine.initialize(null)
 
 func _process(_delta):
 	# DEV ONLY
@@ -192,9 +202,13 @@ func _on_PositionTween_completed(_object, _key):
 		tween_position(Vector2(position.x + sprite_size * 1.25 * facing.x,position.y),0.25)
 		climbing_ledge = false
 		return
+	if state_machine.get_current_state() == "Jumping":
+		emit_signal("on_wall_jump_ready")
+		return
 
 func _physics_process(delta):
 	state_machine.update(delta)
+	action_state_machine.update(delta)
 
 func move(delta, dir, vector = snap_vector):
 	velocity = calculate_move_velocity(velocity, dir, current_y_speed, delta)
@@ -266,6 +280,7 @@ func move_to_hide(area):
 
 func _unhandled_input(event):
 	state_machine.handle_input(event)
+	action_state_machine.handle_input(event)
 
 func can_player_hide():
 	return true if !in_enemy_sight else false
@@ -287,9 +302,9 @@ func change_layer():
 func can_wallrun_check(area):
 	var can_wallrun = false
 	if area:
-		if is_on_floor() and facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area):
+		if facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area):
 				can_wallrun = true
-		if is_on_floor() and facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area):
+		if facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area):
 				can_wallrun = true
 	return can_wallrun
 

@@ -15,10 +15,11 @@ func get_can_shoot():
 	return can_shoot
 
 func enter(actor,_delta = 0.0):
-	actor.set_debug_text("SHOOTING")
+	actor.set_action_text("SHOOTING")
 	actor.make_ranged_attack()
 	can_shoot = false
 
-func update(_actor,_delta):
-	state_machine.set_state("Idle") #Animation will be played
+func exit(actor):
+	actor.set_action_text("")
+
 

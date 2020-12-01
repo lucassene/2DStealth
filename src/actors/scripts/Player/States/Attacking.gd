@@ -16,7 +16,10 @@ func get_can_attack():
 	return can_attack
 
 func enter(actor,_delta = 0.0):
-	actor.set_debug_text("ATTACKING")
+	actor.set_action_text("ATTACKING")
 	actor.make_melee_attack()
 	can_attack = false
+
+func exit(actor):
+	actor.set_action_text("")
 

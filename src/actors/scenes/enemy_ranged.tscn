@@ -1,7 +1,7 @@
 [gd_scene load_steps=9 format=2]
 
 [ext_resource path="res://src/actors/scenes/enemy.tscn" type="PackedScene" id=1]
-[ext_resource path="res://src/actors/scripts/enemy_ranged.gd" type="Script" id=2]
+[ext_resource path="res://src/actors/scripts/Enemy/enemy_ranged.gd" type="Script" id=2]
 
 [sub_resource type="Animation" id=1]
 resource_name = "patrol_E"
@@ -106,10 +106,7 @@ script = ExtResource( 2 )
 speed = 150.0
 search_speed = 200
 
-[node name="castOrigin" parent="." index="4"]
-rotation = 0.0
-
-[node name="AnimationPlayer" parent="." index="7"]
+[node name="AnimationPlayer" parent="." index="8"]
 anims/patrol_E = SubResource( 1 )
 anims/patrol_W = SubResource( 2 )
 anims/smoking-idle-E = SubResource( 3 )

@@ -10,9 +10,6 @@ var hideout = null
 var can_grab_ledge = true setget set_can_grab_ledge,get_can_grab_ledge
 var new_speed = 0.0 setget set_new_speed,get_new_speed
 
-var melee_cooldown = 0.0
-var ranged_cooldown = 0.0
-
 enum CLIMB_DIR {
 	UP,
 	DOWN
@@ -62,9 +59,6 @@ func _on_Player_on_hideout_exited():
 	hideout = null
 	if current_state == "Hiding": set_movement_state()
 
-func _on_Player_on_attack_ended():
-	set_state("Idle")
-
 func initialize(first_state):
 	.initialize(first_state)
 	player_controller = actor.get_player_controller()
@@ -75,16 +69,6 @@ func initialize(first_state):
 	actor.set_current_y_speed(states.Jumping.get_speed())
 
 func update(delta):
-	if !states.Attacking.get_can_attack():
-		melee_cooldown += delta
-		if melee_cooldown >= states.Attacking.get_attack_cooldown():
-			melee_cooldown = 0.0
-			states.Attacking.set_can_attack(true)
-	if !states.Shooting.get_can_shoot():
-		ranged_cooldown += delta
-		if ranged_cooldown >= states.Shooting.get_rate_of_fire():
-			ranged_cooldown = 0.0
-			states.Shooting.set_can_shoot(true)
 	.update(delta)
 
 func set_movement_state():
@@ -123,14 +107,6 @@ func move_over_ledge():
 func set_hiding_state():
 	actor.set_current_speed(states.Crouch_Walk.get_speed())
 	actor.move_to_hide(hideout)
-
-func set_melee_attack_state():
-	if states.Attacking.get_can_attack():
-		set_state("Attacking")
-
-func set_ranged_attack_state():
-	if states.Shooting.get_can_shoot():
-		set_state("Shooting")
 
 func is_player_on_ladder_top():
 	return true if ladder.position.y > actor.position.y else false

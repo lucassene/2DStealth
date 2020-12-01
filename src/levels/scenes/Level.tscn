@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=2]
+[gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://src/res/background.tres" type="TileSet" id=1]
 [ext_resource path="res://src/actors/scenes/player.tscn" type="PackedScene" id=2]
@@ -6,7 +6,6 @@
 [ext_resource path="res://assets/city-night-sky.png" type="Texture" id=4]
 [ext_resource path="res://src/res/tileset.tres" type="TileSet" id=5]
 [ext_resource path="res://src/actors/scenes/enemy_ranged.tscn" type="PackedScene" id=6]
-[ext_resource path="res://src/utils/scenes/Waypoints.tscn" type="PackedScene" id=7]
 [ext_resource path="res://src/utils/scenes/Ladder.tscn" type="PackedScene" id=8]
 [ext_resource path="res://src/utils/scenes/TriggerArea.tscn" type="PackedScene" id=9]
 [ext_resource path="res://src/utils/scenes/OneWayPlatform.tscn" type="PackedScene" id=10]
@@ -80,19 +79,15 @@ limit_right = 7584
 
 [node name="Enemies" type="Node2D" parent="."]
 
-[node name="ER01_points" parent="Enemies" instance=ExtResource( 7 )]
-position = Vector2( 2420, 1150 )
+[node name="EnemyRanged" parent="Enemies" instance=ExtResource( 6 )]
+position = Vector2( 2640, 1152 )
+idles = [ "smoking", "turn", "turn" ]
 
-[node name="1" parent="Enemies/ER01_points" index="1"]
+[node name="1" parent="Enemies/EnemyRanged/Waypoints" index="1"]
 position = Vector2( -1200, 0 )
 
-[node name="2" parent="Enemies/ER01_points" index="2"]
+[node name="2" parent="Enemies/EnemyRanged/Waypoints" index="2"]
 position = Vector2( 800, 0 )
-
-[node name="ER01" parent="Enemies" instance=ExtResource( 6 )]
-position = Vector2( 2420, 1150 )
-idles = [ "smoking", "turn", "turn" ]
-waypoints_path = NodePath("../ER01_points")
 
 [node name="ClimbableAreas" type="Node2D" parent="."]
 
@@ -195,6 +190,8 @@ world_layer = 6
 
 [editable path="Player"]
 
-[editable path="Enemies/ER01_points"]
+[editable path="Enemies/EnemyRanged"]
+
+[editable path="Enemies/EnemyRanged/Waypoints"]
 
 [editable path="ClimbableAreas/Ladder_01"]

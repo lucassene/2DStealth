@@ -19,6 +19,7 @@ func enter(actor,_delta = 0.0):
 	
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"jump","jump"): return
+	if player_controller.check_input_pressed(event,"shoot","set_ranged_attack"): return
 	if player_controller.check_input_pressed(event,"climb_up","set_ladder_collision",true): return
 	if player_controller.check_input_pressed(event,"climb_down","set_ladder_collision",false):
 		if tap_timer > TAP_TIME: 

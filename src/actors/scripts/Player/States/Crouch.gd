@@ -11,6 +11,8 @@ func enter(actor,_delta = 0.0):
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"crouch","exit_crouch"): return
 	if player_controller.check_input_pressed(event,"jump","jump"): return
+	if player_controller.check_input_pressed(event,"melee","set_melee_attack"): return
+	if player_controller.check_input_pressed(event,"shoot","set_ranged_attack"): return
 	if player_controller.check_input_pressed(event,"interact","enter_hide"): return
 
 func update(_actor,_delta):

@@ -1,7 +1,7 @@
-[gd_scene load_steps=15 format=2]
+[gd_scene load_steps=19 format=2]
 
 [ext_resource path="res://assets/enemy.png" type="Texture" id=1]
-[ext_resource path="res://src/actors/scripts/enemy.gd" type="Script" id=2]
+[ext_resource path="res://src/actors/scripts/Enemy/enemy.gd" type="Script" id=2]
 [ext_resource path="res://assets/fieldOfView.png" type="Texture" id=3]
 [ext_resource path="res://assets/warning.png" type="Texture" id=4]
 [ext_resource path="res://assets/danger.png" type="Texture" id=5]
@@ -12,6 +12,10 @@
 [ext_resource path="res://src/animations/smoking-idle-E.tres" type="Animation" id=10]
 [ext_resource path="res://src/animations/smoking-idle-W.tres" type="Animation" id=11]
 [ext_resource path="res://src/actors/scripts/Enemy/EnemyFSM.gd" type="Script" id=12]
+[ext_resource path="res://src/actors/scripts/Enemy/States/Patrolling.gd" type="Script" id=13]
+[ext_resource path="res://src/utils/scenes/Waypoints.tscn" type="PackedScene" id=14]
+[ext_resource path="res://src/actors/scripts/Enemy/States/Idle.gd" type="Script" id=15]
+[ext_resource path="res://src/actors/scripts/Enemy/States/Alerted.gd" type="Script" id=16]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 44.0
@@ -27,7 +31,6 @@ height = 80.0
 collision_layer = 2
 collision_mask = 12
 script = ExtResource( 2 )
-speed = 200.0
 
 [node name="enemy" type="Sprite" parent="."]
 position = Vector2( 0, -96 )
@@ -93,7 +96,6 @@ position = Vector2( 0, -256 )
 texture = ExtResource( 5 )
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-autoplay = "patrol_W"
 anims/patrol_E = ExtResource( 6 )
 anims/patrol_W = ExtResource( 7 )
 anims/smoking_E = ExtResource( 10 )
@@ -147,14 +149,20 @@ collision_mask = 4
 script = ExtResource( 12 )
 
 [node name="Idle" type="Node" parent="StateMachine"]
+script = ExtResource( 15 )
 
 [node name="Patrolling" type="Node" parent="StateMachine"]
+script = ExtResource( 13 )
 
 [node name="Alerted" type="Node" parent="StateMachine"]
+script = ExtResource( 16 )
 
 [node name="Searching" type="Node" parent="StateMachine"]
 
 [node name="Fighting" type="Node" parent="StateMachine"]
+
+[node name="Waypoints" parent="." instance=ExtResource( 14 )]
+[connection signal="on_idle_anim_finished" from="." to="StateMachine/Idle" method="_on_idle_anim_finished"]
 [connection signal="body_entered" from="PlayerDetector" to="." method="_on_PlayerDetector_body_entered"]
 [connection signal="body_entered" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_entered"]
 [connection signal="body_exited" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_exited"]

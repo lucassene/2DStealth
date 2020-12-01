@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=2]
+[gd_scene load_steps=27 format=2]
 
 [ext_resource path="res://assets/player.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/Player/player.gd" type="Script" id=2]
@@ -21,6 +21,7 @@
 [ext_resource path="res://src/actors/scripts/Player/PlayerController.gd" type="Script" id=19]
 [ext_resource path="res://src/actors/scripts/Player/States/Attacking.gd" type="Script" id=20]
 [ext_resource path="res://src/actors/scripts/Player/States/Shooting.gd" type="Script" id=21]
+[ext_resource path="res://src/actors/scripts/Player/ActionStateMachine.gd" type="Script" id=22]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 44.0
@@ -83,6 +84,21 @@ margin_left = -96.0
 margin_top = -223.0
 margin_right = -1.0
 margin_bottom = -209.0
+rect_scale = Vector2( 2, 2 )
+align = 1
+__meta__ = {
+"_edit_use_anchors_": true
+}
+
+[node name="ActionLabel" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -96.0
+margin_top = -250.0
+margin_right = -1.00001
+margin_bottom = -236.0
 rect_scale = Vector2( 2, 2 )
 align = 1
 __meta__ = {
@@ -212,12 +228,15 @@ script = ExtResource( 17 )
 [node name="Hiding" type="Node" parent="StateMachine"]
 script = ExtResource( 18 )
 
-[node name="Attacking" type="Node" parent="StateMachine"]
-script = ExtResource( 20 )
+[node name="ActionStateMachine" type="Node" parent="."]
+script = ExtResource( 22 )
 
-[node name="Shooting" type="Node" parent="StateMachine"]
+[node name="Shooting" type="Node" parent="ActionStateMachine"]
 script = ExtResource( 21 )
-[connection signal="on_attack_ended" from="." to="StateMachine" method="_on_Player_on_attack_ended"]
+
+[node name="Attacking" type="Node" parent="ActionStateMachine"]
+script = ExtResource( 20 )
+[connection signal="on_attack_ended" from="." to="ActionStateMachine" method="_on_Player_on_attack_ended"]
 [connection signal="on_hide" from="." to="StateMachine" method="_on_Player_hide"]
 [connection signal="on_hideout_entered" from="." to="StateMachine" method="_on_Player_on_hideout_entered"]
 [connection signal="on_hideout_exited" from="." to="StateMachine" method="_on_Player_on_hideout_exited"]
@@ -227,6 +246,7 @@ script = ExtResource( 21 )
 [connection signal="on_ledge_exited" from="." to="StateMachine" method="_on_Player_on_ledge_exited"]
 [connection signal="on_wall_entered" from="." to="StateMachine" method="_on_Player_on_wall_entered"]
 [connection signal="on_wall_exited" from="." to="StateMachine" method="_on_Player_on_wall_exited"]
+[connection signal="on_wall_jump_ready" from="." to="StateMachine/Jumping" method="_on_Player_on_wall_jump_ready"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
 [connection signal="animation_started" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_started"]
 [connection signal="area_entered" from="Areas/playerArea" to="." method="_on_PlayerArea_area_entered"]

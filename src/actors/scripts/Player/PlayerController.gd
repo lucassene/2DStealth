@@ -3,9 +3,13 @@ class_name PlayerController
 
 onready var actor = owner
 onready var state_machine setget set_state_machine
+onready var action_state_machine setget set_action_state_machine
 
 func set_state_machine(new_value):
 	state_machine = new_value
+	
+func set_action_state_machine(new_value):
+	action_state_machine = new_value
 
 func check_input_pressed(event,input,method = null,param = null):
 	if event.is_action_pressed(input):
@@ -30,7 +34,13 @@ func exit_crouch(_param):
 	state_machine.set_state("Idle")
 
 func jump(_param):
-	state_machine.set_state("Jumping")
+	if actor.is_on_floor():
+		state_machine.set_state("Jumping")
+		return
+	elif state_machine.wall:
+		state_machine.set_state("Jumping")
+		if !state_machine.get_previous_state() == "Wall_Run":
+			actor.move_to_wall(state_machine.wall)
 
 func set_running_speed(_param):
 	state_machine.set_new_speed(state_machine.states.Running.get_speed())
@@ -86,10 +96,10 @@ func on_key_up(_param):
 		actor.change_layer()
 
 func set_melee_attack(_param):
-	state_machine.set_melee_attack_state()
+	action_state_machine.set_melee_attack_state()
 
 func set_ranged_attack(_param):
-	state_machine.set_ranged_attack_state()
+	action_state_machine.set_ranged_attack_state()
 
 func focus_camera_right(_param):
 	actor.tween_camera(actor.transition.OUT,Vector2.RIGHT)

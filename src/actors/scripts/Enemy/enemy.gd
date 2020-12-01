@@ -14,8 +14,9 @@ onready var bottomRightRC: RayCast2D = $RayCasts/bottomRightRC
 onready var bottomLeftRC: RayCast2D = $RayCasts/bottomLeftRC
 onready var topRightRC: RayCast2D = $RayCasts/topRightRC
 onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
-onready var waypoints = get_node(waypoints_path)
+onready var waypoints = $Waypoints setget ,get_waypoints
 onready var tween = $Tween
+onready var state_machine = $StateMachine setget ,get_state_machine
 
 onready var label = $Label
 
@@ -29,8 +30,10 @@ export var sight_size = Vector2.ONE
 export var fight_sight_size = Vector2(2.5,2.0)
 export var waypoints_path = NodePath()
 
+signal on_idle_anim_finished()
+
 var dir = 0
-var next_dir = 0
+var next_dir = 0 setget ,get_next_dir
 var next_dir_time = 0
 var current_speed = speed
 
@@ -47,34 +50,45 @@ var player
 var facing = Vector2.LEFT
 var on_ledge = false
 var playerArea: Area2D
-var waypoint_position
+var target_waypoint_position
 var last_player_position
 var is_player_in_sight = false
 
+func get_state_machine():
+	return state_machine
+
+func get_waypoints():
+	return waypoints
+
+func get_next_dir():
+	return next_dir
+
+func set_debug_text(text):
+	label.text = text
+
 func _ready():
 	set_fov_size(sight_size)
-	if !waypoints: return
-	position = waypoints.get_start_position()
-	waypoint_position = waypoints.get_next_point_position()
-	enter_patrol_state()
+	#position = waypoints.get_start_position()
+	state_machine.initialize("Patrolling")
 	
 func _process(_delta):
-	match(actualState):
-		states.IDLE:
-			label.text = "IDLE"
-			return
-		states.PATROLLING:
-			label.text = "PATROLLING"
-			play_animation("patrol")
-		states.ALERTED:
-			label.text = "ALERTED"
-			animationPlayer.playback_speed = 2
-			play_animation("patrol")
-		states.FIGHTING:
-			label.text = "FIGHTING"
-			castOrigin.rotation_degrees = (get_angle_to(player.get_global_transform().origin)/3.14)*180
-		states.SEARCHING:
-			label.text = "SEARCHING"
+	pass
+#	match(actualState):
+#		states.IDLE:
+#			label.text = "IDLE"
+#			return
+#		states.PATROLLING:
+#			label.text = "PATROLLING"
+#			play_animation("patrol")
+#		states.ALERTED:
+#			label.text = "ALERTED"
+#			animationPlayer.playback_speed = 2
+#			play_animation("patrol")
+#		states.FIGHTING:
+#			label.text = "FIGHTING"
+#			castOrigin.rotation_degrees = (get_angle_to(player.get_global_transform().origin)/3.14)*180
+#		states.SEARCHING:
+#			label.text = "SEARCHING"
 	
 func _on_fieldOfView_body_entered(body):
 	if body.is_in_group("Player"):
@@ -120,62 +134,65 @@ func _on_Timer_timeout():
 func _on_AnimationPlayer_animation_finished(anim_name):
 	match(anim_name):
 		"turn_W", "turn_E":
-			play_animation("patrol")
-			enter_patrol_state()
+			#play_animation("patrol")
+			emit_signal("on_idle_anim_finished")
+			#enter_patrol_state()
 		"smoking_W":
 			if facing == Vector2.RIGHT:
 				play_animation("turn")
 			else:
-				enter_patrol_state()
+				emit_signal("on_idle_anim_finished")
 		"smoking_E":
 			if facing == Vector2.LEFT:
 				play_animation("turn")
 			else:
-				enter_patrol_state()
+				emit_signal("on_idle_anim_finished")
 
 func _physics_process(delta):
-	if is_on_floor() and can_jump(): jump()
-	match(actualState):
-		states.IDLE, states.PATROLLING:
-			get_direction(waypoint_position, delta)
-		states.ALERTED, states.SEARCHING:
-			get_direction(last_player_position, delta)
-		states.FIGHTING:
-			get_direction(player.position, delta)
+	state_machine.update(delta)
+#	if is_on_floor() and can_jump(): jump()
+#	match(actualState):
+#		states.IDLE, states.PATROLLING:
+#			get_direction(target_waypoint_position, delta)
+#		states.ALERTED, states.SEARCHING:
+#			get_direction(last_player_position, delta)
+#		states.FIGHTING:
+#			get_direction(player.position, delta)
 
 func get_direction(target_position, delta):
-	match(actualState):
-		states.FIGHTING:
-			set_facing(target_position,chase_offset)
-			if OS.get_ticks_msec() > next_dir_time:
-				dir = next_dir
-		states.PATROLLING:
-			set_facing(target_position,0)
-			if check_movement(target_position,delta):
-				position = target_position
-				waypoint_position = waypoints.get_next_point_position()
-				set_facing(waypoint_position,0)
-				set_physics_process(false)
-				actualState = states.IDLE
-				play_animation(idles[waypoints.get_current_index()])
-			else: dir = next_dir
-		states.ALERTED:
-			set_facing(target_position,search_offset)
-			if check_movement(target_position,delta):
-				position = target_position
-				set_physics_process(false)
-			else: dir = next_dir
-		states.SEARCHING:
-			set_facing(target_position,looking_offset * facing.x)
-			if check_movement(target_position,delta):
-				position = target_position
-				enter_alerted_state()
-				alertTimer.start()
-			else: dir = next_dir
-	move(delta)
+#	match(actualState):
+#		states.FIGHTING:
+#			set_facing(target_position,chase_offset)
+#			if OS.get_ticks_msec() > next_dir_time:
+#				dir = next_dir
+#		states.PATROLLING:
+#			set_facing(target_position,0)
+#			if check_movement(target_position,delta):
+#				position = target_position
+#				target_waypoint_position = waypoints.get_next_point_position()
+#				set_facing(target_waypoint_position,0)
+#				set_physics_process(false)
+#				actualState = states.IDLE
+#				play_animation(idles[waypoints.get_current_index()])
+#			else: dir = next_dir
+#		states.ALERTED:
+#			set_facing(target_position,search_offset)
+#			if check_movement(target_position,delta):
+#				position = target_position
+#				set_physics_process(false)
+#			else: dir = next_dir
+#		states.SEARCHING:
+#			set_facing(target_position,looking_offset * facing.x)
+#			if check_movement(target_position,delta):
+#				position = target_position
+#				enter_alerted_state()
+#				alertTimer.start()
+#			else: dir = next_dir
+#	move(delta,current_speed)
+	pass
 
-func move(delta, vector = snap_vector):
-	velocity.x = dir * current_speed
+func move(delta, direction, speed, vector = snap_vector):
+	velocity.x = direction * speed
 	velocity.y += clamp(gravity * delta,-1.0,max_gspeed)
 	velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
 	
@@ -250,7 +267,7 @@ func start_chase(delta):
 	if OS.get_ticks_msec() > next_dir_time:
 		dir = next_dir
 		
-	move(delta)
+	#move(delta,current_speed)
 
 func set_fov_size(size):
 	if size == Vector2.ONE:
