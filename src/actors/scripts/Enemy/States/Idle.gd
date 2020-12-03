@@ -4,5 +4,4 @@ func enter(actor, _delta = 0.0):
 	actor.set_debug_text("IDLE")
 
 func _on_idle_anim_finished():
-	print("called")
 	state_machine.set_state("Patrolling")

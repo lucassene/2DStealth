@@ -14,7 +14,7 @@ onready var bottomRightRC: RayCast2D = $RayCasts/bottomRightRC
 onready var bottomLeftRC: RayCast2D = $RayCasts/bottomLeftRC
 onready var topRightRC: RayCast2D = $RayCasts/topRightRC
 onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
-onready var waypoints = $Waypoints setget ,get_waypoints
+onready var waypoints = get_node(waypoints_path) setget ,get_waypoints
 onready var tween = $Tween
 onready var state_machine = $StateMachine setget ,get_state_machine
 
@@ -31,6 +31,8 @@ export var fight_sight_size = Vector2(2.5,2.0)
 export var waypoints_path = NodePath()
 
 signal on_idle_anim_finished()
+signal on_player_detected(player)
+signal on_player_exited(player)
 
 var dir = 0
 var next_dir = 0 setget ,get_next_dir
@@ -68,7 +70,7 @@ func set_debug_text(text):
 
 func _ready():
 	set_fov_size(sight_size)
-	#position = waypoints.get_start_position()
+	position = waypoints.get_start_position()
 	state_machine.initialize("Patrolling")
 	
 func _process(_delta):
@@ -92,20 +94,18 @@ func _process(_delta):
 	
 func _on_fieldOfView_body_entered(body):
 	if body.is_in_group("Player"):
-		print("player in sight")
 		if !player: 
 			player = body
 			player.connect("on_hide",self,"on_player_hide")
 			player.connect("on_unhide",self,"on_player_unhide")
 		if !player.is_hidden():
 			is_player_in_sight = true
-			match actualState:
-				states.PATROLLING, states.IDLE, states.ALERTED:
-					enter_fight_state()
+			emit_signal("on_player_detected",body)
 
 func _on_fieldOfView_body_exited(body):
 	if body.is_in_group("Player"):
 		is_player_in_sight = false
+		emit_signal("on_player_exited",body)
 		if actualState == states.FIGHTING:
 			alertTimer.start()
 
@@ -120,7 +120,7 @@ func on_player_unhide():
 func _on_PlayerDetector_body_entered(body):
 	if body.is_in_group("Player"):
 		if !player: player = body
-		if !player.is_hidden(): enter_fight_state()
+		if !player.is_hidden(): emit_signal("on_player_contact")
 
 func _on_Timer_timeout():
 	match(actualState):
@@ -134,15 +134,15 @@ func _on_Timer_timeout():
 func _on_AnimationPlayer_animation_finished(anim_name):
 	match(anim_name):
 		"turn_W", "turn_E":
-			#play_animation("patrol")
 			emit_signal("on_idle_anim_finished")
-			#enter_patrol_state()
 		"smoking_W":
+			print("smoking_W")
 			if facing == Vector2.RIGHT:
 				play_animation("turn")
 			else:
 				emit_signal("on_idle_anim_finished")
 		"smoking_E":
+			print("smoking_E")
 			if facing == Vector2.LEFT:
 				play_animation("turn")
 			else:
@@ -229,7 +229,10 @@ func play_animation(anim):
 	if facing == Vector2.RIGHT:
 		animationPlayer.play(anim + "_E")
 	else: animationPlayer.play(anim + "_W")
-	
+
+func set_anim_speed(speed):
+	animationPlayer.playback_speed = speed
+
 func is_on_ledge():
 	if !leftBorder.is_colliding() or !rightBorder.is_colliding():
 		return true

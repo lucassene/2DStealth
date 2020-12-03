@@ -12,6 +12,9 @@ func get_current_index():
 	var index = active_point_index  - 1
 	if index < 0: return get_child_count() - 1
 	else: return index
+	
+func set_current_index(value):
+	active_point_index = value
 
 func get_next_index():
 	return active_point_index

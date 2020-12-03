@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=2]
+[gd_scene load_steps=11 format=2]
 
 [ext_resource path="res://src/res/background.tres" type="TileSet" id=1]
 [ext_resource path="res://src/actors/scenes/player.tscn" type="PackedScene" id=2]
@@ -6,6 +6,7 @@
 [ext_resource path="res://assets/city-night-sky.png" type="Texture" id=4]
 [ext_resource path="res://src/res/tileset.tres" type="TileSet" id=5]
 [ext_resource path="res://src/actors/scenes/enemy_ranged.tscn" type="PackedScene" id=6]
+[ext_resource path="res://src/utils/scenes/Waypoints.tscn" type="PackedScene" id=7]
 [ext_resource path="res://src/utils/scenes/Ladder.tscn" type="PackedScene" id=8]
 [ext_resource path="res://src/utils/scenes/TriggerArea.tscn" type="PackedScene" id=9]
 [ext_resource path="res://src/utils/scenes/OneWayPlatform.tscn" type="PackedScene" id=10]
@@ -77,19 +78,24 @@ speed = 400.0
 [node name="Camera2D" parent="Player" index="2"]
 limit_right = 7584
 
-[node name="Enemies" type="Node2D" parent="."]
+[node name="Enemies" type="Node" parent="."]
 
-[node name="EnemyRanged" parent="Enemies" instance=ExtResource( 6 )]
-position = Vector2( 2640, 1152 )
-idles = [ "smoking", "turn", "turn" ]
+[node name="EN-001" parent="Enemies" instance=ExtResource( 6 )]
+position = Vector2( 2448, 1152 )
+waypoints_path = NodePath("../../Waypoints/WP-EN001")
 
-[node name="1" parent="Enemies/EnemyRanged/Waypoints" index="1"]
-position = Vector2( -1200, 0 )
+[node name="Waypoints" type="Node" parent="."]
 
-[node name="2" parent="Enemies/EnemyRanged/Waypoints" index="2"]
+[node name="WP-EN001" parent="Waypoints" instance=ExtResource( 7 )]
+position = Vector2( 2448, 1152 )
+
+[node name="1" parent="Waypoints/WP-EN001" index="1"]
+position = Vector2( -960, 0 )
+
+[node name="2" parent="Waypoints/WP-EN001" index="2"]
 position = Vector2( 800, 0 )
 
-[node name="ClimbableAreas" type="Node2D" parent="."]
+[node name="ClimbableAreas" type="Node" parent="."]
 
 [node name="Ladder_01" parent="ClimbableAreas" instance=ExtResource( 8 )]
 position = Vector2( 818, 763 )
@@ -113,8 +119,7 @@ rotation = 3.14159
 scale = Vector2( 1, 7 )
 enter_side = Vector2( -1, 0 )
 
-[node name="OneWayPlatforms" type="Node2D" parent="."]
-position = Vector2( 10, 0 )
+[node name="OneWayPlatforms" type="Node" parent="."]
 
 [node name="OneWayPlatform" parent="OneWayPlatforms" instance=ExtResource( 10 )]
 position = Vector2( 1622, 192 )
@@ -128,8 +133,7 @@ scale = Vector2( 8, 8 )
 position = Vector2( 4886, 672 )
 scale = Vector2( 15, 8 )
 
-[node name="HideAreas" type="Node2D" parent="."]
-z_index = 2
+[node name="HideAreas" type="Node" parent="."]
 
 [node name="TriggerArea" parent="HideAreas" instance=ExtResource( 9 )]
 position = Vector2( 2016, 1152 )
@@ -147,7 +151,7 @@ position = Vector2( 1392, 1152 )
 area_type = 1
 can_move = false
 
-[node name="WorldLayerAreas" type="Node2D" parent="."]
+[node name="WorldLayerAreas" type="Node" parent="."]
 
 [node name="ENT_L1_01" parent="WorldLayerAreas" instance=ExtResource( 9 )]
 position = Vector2( 3648, 1152 )
@@ -190,8 +194,6 @@ world_layer = 6
 
 [editable path="Player"]
 
-[editable path="Enemies/EnemyRanged"]
-
-[editable path="Enemies/EnemyRanged/Waypoints"]
+[editable path="Waypoints/WP-EN001"]
 
 [editable path="ClimbableAreas/Ladder_01"]
