@@ -24,3 +24,6 @@ func get_next_point_position():
 	if active_point_index > get_child_count() - 1:
 		active_point_index = 0
 	return get_current_point_position()
+
+func get_current_animation():
+	return get_child(active_point_index).get_animation()

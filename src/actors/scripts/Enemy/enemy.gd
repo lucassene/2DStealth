@@ -1,6 +1,7 @@
 extends Actor
 class_name Enemy
 
+onready var player = get_node("/root/Level/Player") setget ,get_player
 onready var animationPlayer = $AnimationPlayer
 onready var warningSprite = $warningSprite
 onready var dangerSprite = $dangerSprite
@@ -17,11 +18,12 @@ onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
 onready var waypoints = get_node(waypoints_path) setget ,get_waypoints
 onready var tween = $Tween
 onready var state_machine = $StateMachine setget ,get_state_machine
+onready var enemy_controller = $EnemyController setget ,get_controller
 
 onready var label = $Label
 
 export(Array, String) var idles
-export var reaction_time = 450
+export var reaction_time = 450 setget ,get_reaction_time
 export var chase_offset = 1000
 export var search_offset = 200
 export var looking_offset = 100
@@ -31,8 +33,9 @@ export var fight_sight_size = Vector2(2.5,2.0)
 export var waypoints_path = NodePath()
 
 signal on_idle_anim_finished()
-signal on_player_detected(player)
-signal on_player_exited(player)
+signal on_player_detected()
+signal on_player_contact()
+signal on_player_exited()
 
 var dir = 0
 var next_dir = 0 setget ,get_next_dir
@@ -47,8 +50,6 @@ enum states {
 	FIGHTING,
 }
 
-var player
-
 var facing = Vector2.LEFT
 var on_ledge = false
 var playerArea: Area2D
@@ -56,14 +57,23 @@ var target_waypoint_position
 var last_player_position
 var is_player_in_sight = false
 
+func get_player():
+	return player
+
 func get_state_machine():
 	return state_machine
+
+func get_controller():
+	return enemy_controller
 
 func get_waypoints():
 	return waypoints
 
 func get_next_dir():
 	return next_dir
+
+func get_reaction_time():
+	return reaction_time
 
 func set_debug_text(text):
 	label.text = text
@@ -74,38 +84,21 @@ func _ready():
 	state_machine.initialize("Patrolling")
 	
 func _process(_delta):
-	pass
-#	match(actualState):
-#		states.IDLE:
-#			label.text = "IDLE"
-#			return
-#		states.PATROLLING:
-#			label.text = "PATROLLING"
-#			play_animation("patrol")
-#		states.ALERTED:
-#			label.text = "ALERTED"
-#			animationPlayer.playback_speed = 2
-#			play_animation("patrol")
-#		states.FIGHTING:
-#			label.text = "FIGHTING"
-#			castOrigin.rotation_degrees = (get_angle_to(player.get_global_transform().origin)/3.14)*180
-#		states.SEARCHING:
-#			label.text = "SEARCHING"
+	if state_machine.get_current_state() == "Alerted": rotate_sight()
 	
 func _on_fieldOfView_body_entered(body):
 	if body.is_in_group("Player"):
 		if !player: 
-			player = body
 			player.connect("on_hide",self,"on_player_hide")
 			player.connect("on_unhide",self,"on_player_unhide")
 		if !player.is_hidden():
 			is_player_in_sight = true
-			emit_signal("on_player_detected",body)
+			emit_signal("on_player_detected")
 
 func _on_fieldOfView_body_exited(body):
 	if body.is_in_group("Player"):
 		is_player_in_sight = false
-		emit_signal("on_player_exited",body)
+		emit_signal("on_player_exited")
 		if actualState == states.FIGHTING:
 			alertTimer.start()
 
@@ -119,7 +112,6 @@ func on_player_unhide():
 
 func _on_PlayerDetector_body_entered(body):
 	if body.is_in_group("Player"):
-		if !player: player = body
 		if !player.is_hidden(): emit_signal("on_player_contact")
 
 func _on_Timer_timeout():
@@ -150,52 +142,15 @@ func _on_AnimationPlayer_animation_finished(anim_name):
 
 func _physics_process(delta):
 	state_machine.update(delta)
-#	if is_on_floor() and can_jump(): jump()
-#	match(actualState):
-#		states.IDLE, states.PATROLLING:
-#			get_direction(target_waypoint_position, delta)
-#		states.ALERTED, states.SEARCHING:
-#			get_direction(last_player_position, delta)
-#		states.FIGHTING:
-#			get_direction(player.position, delta)
-
-func get_direction(target_position, delta):
-#	match(actualState):
-#		states.FIGHTING:
-#			set_facing(target_position,chase_offset)
-#			if OS.get_ticks_msec() > next_dir_time:
-#				dir = next_dir
-#		states.PATROLLING:
-#			set_facing(target_position,0)
-#			if check_movement(target_position,delta):
-#				position = target_position
-#				target_waypoint_position = waypoints.get_next_point_position()
-#				set_facing(target_waypoint_position,0)
-#				set_physics_process(false)
-#				actualState = states.IDLE
-#				play_animation(idles[waypoints.get_current_index()])
-#			else: dir = next_dir
-#		states.ALERTED:
-#			set_facing(target_position,search_offset)
-#			if check_movement(target_position,delta):
-#				position = target_position
-#				set_physics_process(false)
-#			else: dir = next_dir
-#		states.SEARCHING:
-#			set_facing(target_position,looking_offset * facing.x)
-#			if check_movement(target_position,delta):
-#				position = target_position
-#				enter_alerted_state()
-#				alertTimer.start()
-#			else: dir = next_dir
-#	move(delta,current_speed)
-	pass
 
 func move(delta, direction, speed, vector = snap_vector):
 	velocity.x = direction * speed
 	velocity.y += clamp(gravity * delta,-1.0,max_gspeed)
 	velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
-	
+
+func rotate_sight():
+	castOrigin.rotation_degrees = (get_angle_to(player.get_global_transform().origin)/3.14)*180
+
 func can_jump():
 	match(facing):
 		Vector2.LEFT:
@@ -218,7 +173,7 @@ func has_wall():
 			if bottomRightRC.is_colliding() and topRightRC.is_colliding():
 				return true
 			return false
-	return false	
+	return false
 
 func jump():
 	dir = facing.x
@@ -226,9 +181,12 @@ func jump():
 	velocity = move_and_slide_with_snap(velocity, Vector2.ZERO, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
 
 func play_animation(anim):
-	if facing == Vector2.RIGHT:
+	if enemy_controller.get_facing() == Vector2.RIGHT:
 		animationPlayer.play(anim + "_E")
 	else: animationPlayer.play(anim + "_W")
+
+func stop_animation():
+	animationPlayer.stop()
 
 func set_anim_speed(speed):
 	animationPlayer.playback_speed = speed
@@ -237,40 +195,6 @@ func is_on_ledge():
 	if !leftBorder.is_colliding() or !rightBorder.is_colliding():
 		return true
 	else: return false
-
-func set_facing(target_position, offset):
-	if target_position.x < position.x - offset:
-		set_chase_direction(-1)
-		facing = Vector2.LEFT
-	elif target_position.x > position.x + offset:
-		set_chase_direction(1)
-		facing = Vector2.RIGHT
-	else:
-		set_chase_direction(0)
-		facing = Vector2.LEFT
-
-func set_chase_direction(target_dir):
-	if next_dir != target_dir:
-		next_dir = target_dir
-		next_dir_time = OS.get_ticks_msec() + reaction_time
-
-func check_movement(target_position, delta):
-	var motion = facing * current_speed * delta
-	var distance_to_target = position.distance_to(target_position)
-	return true if motion.length() > distance_to_target else false
-
-func start_chase(delta):	
-	if player.position.x < position.x - chase_offset:
-		set_chase_direction(-1)
-	elif player.position.x > position.x + chase_offset:
-		set_chase_direction(1)
-	else:
-		set_chase_direction(0)
-	
-	if OS.get_ticks_msec() > next_dir_time:
-		dir = next_dir
-		
-	#move(delta,current_speed)
 
 func set_fov_size(size):
 	if size == Vector2.ONE:
@@ -327,4 +251,7 @@ func enter_fight_state():
 func on_hit():
 	get_node("CollisionShape2D").set_deferred("disabled",true)
 	queue_free()
+
+
+
 
