@@ -10,7 +10,6 @@ export var SIGHT_SIZE = Vector2(1.25,1.1)
 var enemy_controller
 
 var last_player_position = Vector2.ZERO setget set_last_player_position
-var is_player_in_sight = true
 var timer = 0
 
 func set_last_player_position(value):
@@ -23,11 +22,9 @@ func enter(actor,_delta = 0.0):
 	actor.play_animation("patrol")
 	actor.warningSprite.visible = true
 	actor.dangerSprite.visible = false
-	last_player_position = state_machine.get_player().position
+	last_player_position = Global.player.position
 	enemy_controller.set_facing(last_player_position,0)
 	actor.set_fov_size(SIGHT_SIZE)
-	if state_machine.get_previous_state() == "Alerted":
-		is_player_in_sight = false
 	timer = 0
 
 func exit(actor):
@@ -38,24 +35,32 @@ func exit(actor):
 
 func update(_actor,delta):
 	timer += delta
-	if timer >= ALERT_DELAY and is_player_in_sight:
+	if timer >= ALERT_DELAY and state_machine.is_player_in_sight and !state_machine.is_player_hidden:
 		state_machine.set_state("Alerted")
 		return
-	if timer >= SEARCH_TIME and !is_player_in_sight:
+	if timer >= SEARCH_TIME and !state_machine.is_player_in_sight or timer >= SEARCH_TIME and state_machine.is_player_hidden:
 		state_machine.set_state("Patrolling")
 		return
 	enemy_controller.update_movement(last_player_position,SPEED,delta,SEARCH_OFFSET)
 	
-func on_player_detected(player):
-	last_player_position = player.position
-	is_player_in_sight = true
-	if state_machine.get_previous_state() == "Alerted":
+func on_player_detected():
+	last_player_position = Global.player.position
+	if state_machine.get_previous_state() == "Alerted" and !state_machine.is_player_hidden:
 		state_machine.set_state("Alerted")
 
-func on_player_exited(player):
-	last_player_position = player.position
-	is_player_in_sight = false
+func on_player_exited():
+	if !state_machine.is_player_hidden: 
+		last_player_position = Global.player.position
 
-func on_player_contact(player):
-	last_player_position = player.position
-	is_player_in_sight = true
+func on_player_contact():
+	if !state_machine.is_player_hidden: 
+		last_player_position = Global.player.position
+
+func on_player_hide():
+	if state_machine.is_player_in_sight:
+		last_player_position = Global.player.position
+
+func on_player_unhide():
+	if state_machine.is_player_in_sight:
+		last_player_position = Global.player.position
+

@@ -16,7 +16,7 @@ enum physics_layer {
 enum type {
 	PARKOUR_WALL,
 	HIDEOUT,
-	LAYER_CHANGE
+	LAYER_CHANGE,
 }
 
 enum traffic {
@@ -31,6 +31,21 @@ export(traffic) var traffic_type = traffic.ENTRANCE
 export(physics_layer) var world_layer = physics_layer.WORLD_LAYER_0
 export var can_move = true setget ,can_player_move
 
+signal on_player_entered(area)
+signal on_player_exited(area)
+
+func _on_TriggerArea_body_entered(body):
+	if body.is_in_group("Player"):
+		emit_signal("on_player_entered",self)
+
+func _on_TriggerArea_body_exited(body):
+	if body.is_in_group("Player"):
+		emit_signal("on_player_exited",self)
+
+func _ready():
+	connect("on_player_entered",Global.player,"_on_trigger_area_entered")
+	connect("on_player_exited",Global.player,"_on_trigger_area_exited")
+	
 func can_player_move():
 	return can_move
 
@@ -65,4 +80,3 @@ func can_enter_layer():
 
 func can_exit_layer():
 	return true if traffic_type == traffic.EXIT else false
-		

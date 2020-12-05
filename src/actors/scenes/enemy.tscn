@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=2]
+[gd_scene load_steps=21 format=2]
 
 [ext_resource path="res://assets/enemy.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/Enemy/enemy.gd" type="Script" id=2]
@@ -26,6 +26,23 @@ height = 96.0
 radius = 54.0
 height = 80.0
 
+[sub_resource type="Animation" id=3]
+resource_name = "patrol"
+length = 5.0
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("sprite/castOrigin:rotation_degrees")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 2, 4, 5 ),
+"transitions": PoolRealArray( 1.27456, 1.41421, 1.36604, 1.1487 ),
+"update": 0,
+"values": [ 1.0, 6.0, -3.0, 1.0 ]
+}
+
 [node name="Enemy" type="KinematicBody2D" groups=[
 "Enemy",
 ]]
@@ -33,9 +50,67 @@ collision_layer = 2
 collision_mask = 12
 script = ExtResource( 2 )
 
-[node name="enemy" type="Sprite" parent="."]
+[node name="sprite" type="Sprite" parent="."]
 position = Vector2( 0, -96 )
 texture = ExtResource( 1 )
+
+[node name="RayCasts" type="Node2D" parent="sprite"]
+position = Vector2( 0, 96 )
+
+[node name="leftBorder" type="RayCast2D" parent="sprite/RayCasts"]
+position = Vector2( -48, 0 )
+enabled = true
+collision_mask = 4
+
+[node name="rightBorder" type="RayCast2D" parent="sprite/RayCasts"]
+position = Vector2( 50, 0 )
+enabled = true
+collision_mask = 4
+
+[node name="bottomRightRC" type="RayCast2D" parent="sprite/RayCasts"]
+position = Vector2( 0, -56 )
+enabled = true
+cast_to = Vector2( 100, 0 )
+collision_mask = 4
+
+[node name="bottomLeftRC" type="RayCast2D" parent="sprite/RayCasts"]
+position = Vector2( 0, -56 )
+enabled = true
+cast_to = Vector2( -100, 0 )
+collision_mask = 4
+
+[node name="topRightRC" type="RayCast2D" parent="sprite/RayCasts"]
+position = Vector2( 0, -128 )
+enabled = true
+cast_to = Vector2( 150, 0 )
+collision_mask = 4
+
+[node name="topLeftRC" type="RayCast2D" parent="sprite/RayCasts"]
+position = Vector2( 0, -128 )
+enabled = true
+cast_to = Vector2( -150, 0 )
+collision_mask = 4
+
+[node name="castOrigin" type="Position2D" parent="sprite"]
+position = Vector2( 0, -48 )
+rotation = 0.0174533
+
+[node name="castPoint" type="Position2D" parent="sprite/castOrigin"]
+position = Vector2( 64, 0 )
+
+[node name="fieldOfView" type="Area2D" parent="sprite/castOrigin" groups=[
+"EnemySight",
+]]
+position = Vector2( 48, 0 )
+collision_layer = 2
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="sprite/castOrigin/fieldOfView"]
+polygon = PoolVector2Array( 0, 0, 400, -200, 400, 200 )
+
+[node name="Sprite" type="Sprite" parent="sprite/castOrigin/fieldOfView"]
+position = Vector2( 210, 0.5 )
+scale = Vector2( 1.5, 1.4 )
+texture = ExtResource( 3 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2( 0, -92 )
@@ -54,26 +129,6 @@ collision_layer = 2147483650
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerDetector"]
 position = Vector2( 0, -93 )
 shape = SubResource( 2 )
-
-[node name="castOrigin" type="Position2D" parent="."]
-position = Vector2( 0, -144 )
-
-[node name="castPoint" type="Position2D" parent="castOrigin"]
-position = Vector2( 64, 0 )
-
-[node name="fieldOfView" type="Area2D" parent="castOrigin" groups=[
-"EnemySight",
-]]
-position = Vector2( 48, 0 )
-collision_layer = 2
-
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="castOrigin/fieldOfView"]
-polygon = PoolVector2Array( 0, 0, 400, -200, 400, 200 )
-
-[node name="Sprite" type="Sprite" parent="castOrigin/fieldOfView"]
-position = Vector2( 210, 0.5 )
-scale = Vector2( 1.5, 1.4 )
-texture = ExtResource( 3 )
 
 [node name="Label" type="Label" parent="."]
 margin_left = -81.3544
@@ -97,54 +152,15 @@ position = Vector2( 0, -256 )
 texture = ExtResource( 5 )
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/patrol = SubResource( 3 )
 anims/patrol_E = ExtResource( 6 )
 anims/patrol_W = ExtResource( 7 )
-anims/smoking_E = ExtResource( 10 )
+anims/smoking = ExtResource( 10 )
 anims/smoking_W = ExtResource( 11 )
-anims/turn_E = ExtResource( 8 )
-anims/turn_W = ExtResource( 9 )
-
-[node name="alertTimer" type="Timer" parent="."]
-wait_time = 10.0
-one_shot = true
+anims/turn = ExtResource( 8 )
+anims/turn_E = ExtResource( 9 )
 
 [node name="Tween" type="Tween" parent="."]
-
-[node name="RayCasts" type="Node2D" parent="."]
-
-[node name="leftBorder" type="RayCast2D" parent="RayCasts"]
-position = Vector2( -48, 0 )
-enabled = true
-collision_mask = 4
-
-[node name="rightBorder" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 50, 0 )
-enabled = true
-collision_mask = 4
-
-[node name="bottomRightRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 0, -56 )
-enabled = true
-cast_to = Vector2( 100, 0 )
-collision_mask = 4
-
-[node name="bottomLeftRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 0, -56 )
-enabled = true
-cast_to = Vector2( -100, 0 )
-collision_mask = 4
-
-[node name="topRightRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 0, -128 )
-enabled = true
-cast_to = Vector2( 150, 0 )
-collision_mask = 4
-
-[node name="topLeftRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 0, -128 )
-enabled = true
-cast_to = Vector2( -150, 0 )
-collision_mask = 4
 
 [node name="EnemyController" type="Node" parent="."]
 script = ExtResource( 17 )
@@ -167,8 +183,7 @@ script = ExtResource( 14 )
 [connection signal="on_player_contact" from="." to="StateMachine" method="_on_player_contact"]
 [connection signal="on_player_detected" from="." to="StateMachine" method="_on_player_detected"]
 [connection signal="on_player_exited" from="." to="StateMachine" method="_on_player_exited"]
+[connection signal="body_entered" from="sprite/castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_entered"]
+[connection signal="body_exited" from="sprite/castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_exited"]
 [connection signal="body_entered" from="PlayerDetector" to="." method="_on_PlayerDetector_body_entered"]
-[connection signal="body_entered" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_entered"]
-[connection signal="body_exited" from="castOrigin/fieldOfView" to="." method="_on_fieldOfView_body_exited"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
-[connection signal="timeout" from="alertTimer" to="." method="_on_Timer_timeout"]

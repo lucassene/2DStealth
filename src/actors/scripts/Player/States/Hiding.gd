@@ -4,6 +4,7 @@ var player_controller
 
 func enter(actor, _delta=0):
 	player_controller = actor.get_player_controller()
+	actor.set_collision_mask_bit(1,false)
 	actor.set_debug_text("HIDING")
 	actor.set_current_speed(state_machine.states.Crouch_Walk.SPEED)
 
@@ -24,6 +25,7 @@ func update(actor,delta):
 		state_machine.set_movement_state()
 
 func exit(actor):
+	actor.set_collision_mask_bit(1,true)
 	actor.exit_hiding_state()
 
 func get_x_movement():

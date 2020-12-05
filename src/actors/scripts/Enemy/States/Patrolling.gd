@@ -11,24 +11,27 @@ var current_waypoint_index = 0
 func enter(actor,_delta = 0.0):
 	enemy_controller = actor.get_controller()
 	actor.set_debug_text("PATROLLING")
-	if !waypoints: waypoints = actor.get_waypoints()
+	waypoints = actor.get_waypoints()
 	waypoints.set_current_index(current_waypoint_index)
 	next_waypoint_position = waypoints.get_next_point_position()
-	enemy_controller.set_facing(next_waypoint_position,0)
 	actor.set_fov_size(Vector2.ONE)
 	actor.set_anim_speed(1.0)
 	actor.play_animation("patrol")
 	
-func update(actor,delta):
+func update(_actor,delta):
 	var has_arrived = enemy_controller.update_movement(next_waypoint_position,SPEED,delta,0)
 	if has_arrived:
-		state_machine.set_state("Idle")
 		current_waypoint_index = waypoints.get_next_index()
-		actor.play_animation(waypoints.get_current_animation())
+		state_machine.set_state("Idle")
 
-func on_player_detected(player):
-	state_machine.set_searching_state(player)
+func on_player_detected():
+	if !state_machine.is_player_hidden:
+		state_machine.set_state("Searching")
 
-func on_player_contact(player):
-	state_machine.set_searching_state(player)
+func on_player_contact():
+	state_machine.set_state("Searching")
+
+func on_player_unhide():
+	if state_machine.is_player_in_sight: 
+		state_machine.set_state("Searching")
 

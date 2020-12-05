@@ -249,8 +249,6 @@ script = ExtResource( 20 )
 [connection signal="on_wall_jump_ready" from="." to="StateMachine/Jumping" method="_on_Player_on_wall_jump_ready"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
 [connection signal="animation_started" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_started"]
-[connection signal="area_entered" from="Areas/playerArea" to="." method="_on_PlayerArea_area_entered"]
-[connection signal="area_exited" from="Areas/playerArea" to="." method="_on_PlayerArea_area_exited"]
 [connection signal="body_entered" from="Areas/meleeArea" to="." method="_on_meleeArea_body_entered"]
 [connection signal="tween_completed" from="Tweens/PositionTween" to="." method="_on_PositionTween_completed"]
 [connection signal="tween_completed" from="Tweens/NoiseTween" to="." method="_on_NoiseTween_tween_completed"]

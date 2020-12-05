@@ -4,7 +4,7 @@
 resource_name = "smoking_W"
 length = 5.0
 tracks/0/type = "value"
-tracks/0/path = NodePath("castOrigin:rotation_degrees")
+tracks/0/path = NodePath("sprite/castOrigin:rotation_degrees")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/imported = false

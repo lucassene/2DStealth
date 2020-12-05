@@ -9,7 +9,7 @@ extents = Vector2( 30, 48 )
 [node name="Ladder" type="Area2D" groups=[
 "Climbable",
 ]]
-monitoring = false
+monitorable = false
 collision_layer = 4
 collision_mask = 3
 script = ExtResource( 2 )
@@ -19,3 +19,5 @@ shape = SubResource( 1 )
 
 [node name="OneWayPlatform" parent="." instance=ExtResource( 1 )]
 position = Vector2( -48, -48 )
+[connection signal="body_entered" from="." to="." method="_on_Ladder_body_entered"]
+[connection signal="body_exited" from="." to="." method="_on_Ladder_body_exited"]

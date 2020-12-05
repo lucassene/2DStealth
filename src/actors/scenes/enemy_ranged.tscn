@@ -106,7 +106,7 @@ script = ExtResource( 2 )
 speed = 150.0
 search_speed = 200
 
-[node name="AnimationPlayer" parent="." index="8"]
+[node name="AnimationPlayer" parent="." index="7"]
 anims/patrol_E = SubResource( 1 )
 anims/patrol_W = SubResource( 2 )
 anims/smoking-idle-E = SubResource( 3 )

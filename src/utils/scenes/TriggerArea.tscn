@@ -8,7 +8,7 @@ extents = Vector2( 48, 48 )
 [node name="TriggerArea" type="Area2D" groups=[
 "TriggerArea",
 ]]
-monitoring = false
+monitorable = false
 collision_layer = 4
 collision_mask = 3
 script = ExtResource( 1 )
@@ -17,3 +17,5 @@ script = ExtResource( 1 )
 position = Vector2( 0, -48 )
 rotation = 1.5708
 shape = SubResource( 1 )
+[connection signal="body_entered" from="." to="." method="_on_TriggerArea_body_entered"]
+[connection signal="body_exited" from="." to="." method="_on_TriggerArea_body_exited"]

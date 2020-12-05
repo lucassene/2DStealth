@@ -83,7 +83,7 @@ SPEED = 800.0
 
 [node name="Enemies" type="Node" parent="."]
 
-[node name="EN001" parent="Enemies" instance=ExtResource( 6 )]
+[node name="EnemyRanged" parent="Enemies" instance=ExtResource( 6 )]
 position = Vector2( 2448, 1152 )
 waypoints_path = NodePath("../../Waypoints/WP-EN001")
 

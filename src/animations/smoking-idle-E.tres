@@ -1,10 +1,10 @@
 [gd_resource type="Animation" format=2]
 
 [resource]
-resource_name = "smoking_E"
+resource_name = "smoking"
 length = 5.0
 tracks/0/type = "value"
-tracks/0/path = NodePath("castOrigin:rotation_degrees")
+tracks/0/path = NodePath("sprite/castOrigin:rotation_degrees")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/imported = false

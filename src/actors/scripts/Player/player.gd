@@ -74,6 +74,7 @@ var last_layer: Area2D
 var facing = Vector2.RIGHT
 var sprite_size
 
+var is_enemy_alerted = false
 var in_enemy_sight = false
 
 func get_state_machine():
@@ -111,6 +112,7 @@ func set_action_text(text):
 	actionLabel.text = text
 
 func _ready():
+	Global.player = self
 	sprite_size = sprite.get_texture().get_size().x
 	state_machine.initialize("Idle")
 	action_state_machine.initialize(null)
@@ -127,47 +129,57 @@ func set_time_scale():
 	if Input.is_action_just_pressed("normal_time"):
 		Engine.time_scale = 1.0
 
-func _on_PlayerArea_area_entered(area):
-	if area.get_groups():
-		match area.get_groups()[0]:
-			"Climbable":
-				emit_signal("on_ladder_entered",area)
-			"TriggerArea":
-				match area.get_area_type():
-					area.type.PARKOUR_WALL:
-						if can_wallrun_check(area): emit_signal("on_wall_entered",area)
-					area.type.HIDEOUT:
-						emit_signal("on_hideout_entered",area)
-					area.type.LAYER_CHANGE:
-						can_change_layer = true
-						last_layer = area
-						exit_layer(last_layer.get_layer_bit())
-			"Ledge":
-				if can_grab_check(area): emit_signal("on_ledge_entered",area)
-			"Enemy":
-				print("you're dead!")
-			"EnemySight":
-				in_enemy_sight = true
+func _on_ladder_area_entered(area):
+	emit_signal("on_ladder_entered",area)
 
-func _on_PlayerArea_area_exited(area):
-	if area.get_groups():
-		match area.get_groups()[0]:
-			"Climbable":
-				emit_signal("on_ladder_exited")
-			"TriggerArea":
-				match area.get_area_type():
-					area.type.PARKOUR_WALL:
-						emit_signal("on_wall_exited")
-					area.type.HIDEOUT:
-						emit_signal("on_hideout_exited")
-					area.type.LAYER_CHANGE:
-						can_change_layer = false
-						if !change_layer_pressed: exit_layer(last_layer.get_layer_bit())
-						change_layer_pressed = false
-			"Ledge":
-				emit_signal("on_ledge_exited")
-			"EnemySight":
-				in_enemy_sight = false
+func _on_ladder_area_exited():
+	emit_signal("on_ladder_exited")
+
+func _on_trigger_area_entered(area):
+	if area.is_in_group("TriggerArea"):
+		match area.get_area_type():
+			area.type.PARKOUR_WALL:
+				if can_wallrun_check(area): 
+					emit_signal("on_wall_entered",area)
+					return
+			area.type.HIDEOUT:
+				emit_signal("on_hideout_entered",area)
+				return
+			area.type.LAYER_CHANGE:
+				can_change_layer = true
+				last_layer = area
+				exit_layer(last_layer.get_layer_bit())
+				return
+
+func _on_trigger_area_exited(area):
+	if area.is_in_group("TriggerArea"):
+		match area.get_area_type():
+			area.type.PARKOUR_WALL:
+				emit_signal("on_wall_exited")
+				return
+			area.type.HIDEOUT:
+				emit_signal("on_hideout_exited")
+				return
+			area.type.LAYER_CHANGE:
+				can_change_layer = false
+				if !change_layer_pressed: exit_layer(last_layer.get_layer_bit())
+				change_layer_pressed = false
+				return
+
+func _on_ledge_area_entered(area):
+	emit_signal("on_ledge_entered",area)
+
+func _on_ledge_area_exited():
+	emit_signal("on_ledge_exited")
+
+func _on_in_enemy_sight():
+	in_enemy_sight = true
+
+func _on_out_of_enemy_sight():
+	in_enemy_sight = false
+
+func _on_enemy_contact():
+	print("you're dead!")
 
 func _on_meleeArea_body_entered(body):
 	if body.is_in_group("Enemy"):
@@ -187,7 +199,7 @@ func _on_AnimationPlayer_animation_started(anim_name):
 	match anim_name:
 		"jump_to_hide":
 			if state_machine.get_current_state() != "Hiding":
-				enter_hiding_state()
+				state_machine.set_state("Hiding")
 			elif animation_player.get_playing_speed() < 0:
 				is_going_to_unhide = true
 
@@ -206,9 +218,19 @@ func _on_PositionTween_completed(_object, _key):
 		emit_signal("on_wall_jump_ready")
 		return
 
+func _on_enemy_alerted():
+	is_enemy_alerted = true
+
+func _on_enemy_not_alerted():
+	is_enemy_alerted = false
+
 func _physics_process(delta):
 	state_machine.update(delta)
 	action_state_machine.update(delta)
+
+func _unhandled_input(event):
+	state_machine.handle_input(event)
+	action_state_machine.handle_input(event)
 
 func move(delta, dir, vector = snap_vector):
 	velocity = calculate_move_velocity(velocity, dir, current_y_speed, delta)
@@ -227,14 +249,18 @@ func calculate_move_velocity(linear_velocity, direction, up_speed, delta):
 	return out
 
 func enter_hiding_state():
-	set_collision_mask_bit(1,false)
-	state_machine.set_state("Hiding")
+	move_to_hide(state_machine.hideout)
 
 func exit_hiding_state():
 	tween_fade(transition.IN)
 	emit_signal("on_unhide")
 	z_index = 1
-	set_collision_mask_bit(1,true)
+
+func can_hide():
+	if in_enemy_sight:
+		return !is_enemy_alerted
+	else:
+		return true
 
 func is_on_ledge():
 	if bottomLeftRC.is_colliding() and !topLeftRC.is_colliding():
@@ -278,9 +304,9 @@ func move_to_hide(area):
 		tween_fade(transition.OUT)
 		animation_player.play("jump_to_hide")
 
-func _unhandled_input(event):
-	state_machine.handle_input(event)
-	action_state_machine.handle_input(event)
+#func _input(event):
+#	state_machine.handle_input(event)
+#	action_state_machine.handle_input(event)
 
 func can_player_hide():
 	return true if !in_enemy_sight else false

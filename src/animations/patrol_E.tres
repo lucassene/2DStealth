@@ -6,14 +6,14 @@ length = 5.0
 loop = true
 step = 0.5
 tracks/0/type = "value"
-tracks/0/path = NodePath("castOrigin:rotation_degrees")
+tracks/0/path = NodePath("sprite/castOrigin:rotation_degrees")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/imported = false
 tracks/0/enabled = true
 tracks/0/keys = {
 "times": PoolRealArray( 0, 1.5, 3.5, 5 ),
-"transitions": PoolRealArray( 1.27456, 1.27456, 1.23114, 1.36604 ),
+"transitions": PoolRealArray( 1.27456, 1.27456, 1.27456, 1.31951 ),
 "update": 0,
 "values": [ 0.0, 6.0, -3.0, 1.0 ]
 }

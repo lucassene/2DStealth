@@ -66,8 +66,8 @@ func set_ladder_collision(param):
 	state_machine.ladder.set_platform_collision(param)
 
 func enter_hide(_param):
-	if state_machine.hideout:
-		state_machine.set_hiding_state()
+	if state_machine.hideout and actor.can_hide():
+		actor.enter_hiding_state()
 
 func exit_hide(_param):
 	if state_machine.hideout.can_player_move():
@@ -86,9 +86,10 @@ func enter_falling(_param):
 	state_machine.set_state("Falling")
 
 func on_key_up(_param):
-	if state_machine.ladder and !state_machine.is_player_on_ladder_top():
-		state_machine.set_climb_state(state_machine.CLIMB_DIR.UP)
-		return
+	if state_machine.ladder:
+		if !state_machine.is_player_on_ladder_top():
+			state_machine.set_climb_state(state_machine.CLIMB_DIR.UP)
+			return
 	if state_machine.wall:
 		state_machine.set_wall_run_state()
 		return
