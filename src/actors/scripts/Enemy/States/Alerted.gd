@@ -19,6 +19,7 @@ func enter(actor,_delta = 0.0):
 	actor.stop_animation()
 	actor.enter_alerted_state()
 	actor.set_fov_size(SIGHT_SIZE)
+	actor.rotate_sight()
 	actor.on_alerted()
 	last_player_position = Global.player.position
 	timer = 0
@@ -30,7 +31,8 @@ func exit(actor):
 	last_player_position = Vector2.ZERO
 	timer = 0
 
-func update(_actor,delta):
+func update(actor,delta):
+	actor.rotate_sight()
 	if !state_machine.is_player_in_sight or state_machine.is_player_hidden: timer += delta
 	if timer >= ESCAPE_TIME:
 		state_machine.set_state("Searching")

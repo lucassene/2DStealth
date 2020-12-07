@@ -22,6 +22,9 @@ func update_movement(target,speed,delta,offset):
 	var previous_facing = facing
 	var dir = 0
 	set_facing(target,offset)
+	if actor.can_jump():
+		state_machine.set_air_state("Jumping")
+		return
 	var target_position = get_target_position_with_offset(target,offset)
 	if is_on_destination(target_position,speed,delta):
 		actor.position = target_position
@@ -35,6 +38,13 @@ func update_movement(target,speed,delta,offset):
 		actor.turn(facing)
 	actor.move(delta,dir,speed)
 	return false
+
+func update_air_movement(delta,speed):
+	var velocity = actor.move(delta,facing.x,speed)
+	if velocity.y > 1.0 and !actor.is_on_floor(): 
+		state_machine.set_state("Falling")
+	elif actor.is_on_floor():
+		state_machine.back_from_air()
 
 func get_target_position_with_offset(target,offset):
 	var pos = (target.x + offset) * facing.x

@@ -1,6 +1,7 @@
 extends RigidBody2D
 
-export var speed = 1200.0
+export var SPEED = 2000.0
+export var SPAWN_TIME = 3.0
 
 var origin
 
@@ -16,10 +17,10 @@ func _ready():
 
 func shoot(rotation_deg: float):
 	rotation_degrees = rotation_deg
-	apply_impulse(Vector2(),Vector2(speed,0).rotated(rotation))
+	apply_impulse(Vector2(),Vector2(SPEED,0).rotated(rotation))
 
 func self_destruct():
-	yield(get_tree().create_timer(3.0),"timeout")
+	yield(get_tree().create_timer(SPAWN_TIME),"timeout")
 	queue_free()
 
 func _on_Bullet_body_entered(body):

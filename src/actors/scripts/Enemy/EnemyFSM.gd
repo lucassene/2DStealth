@@ -4,6 +4,10 @@ var enemy_controller
 
 var is_player_hidden = false
 var is_player_in_sight = false
+var prior_air_state setget ,get_prior_air_state
+
+func get_prior_air_state():
+	return prior_air_state
 
 func _on_player_detected():
 	is_player_in_sight = true
@@ -35,6 +39,13 @@ func initialize(first_state):
 	connect_to_player()
 	enemy_controller = actor.get_controller()
 	enemy_controller.initialize(self,actor.get_reaction_time())
+
+func set_air_state(state):
+	prior_air_state = current_state
+	set_state(state)
+
+func back_from_air():
+	set_state(prior_air_state)
 
 func connect_to_player():
 	Global.player.connect("on_hide",self,"_on_player_hide")

@@ -1,21 +1,23 @@
 extends Enemy
 
-export var rate_of_fire = 2.0
+export var RATE_OF_FIRE = 2.0
+var timer = 0
 var can_shoot = true
 
-func _process(_delta):
-	match(actualState):
-		states.FIGHTING:
-			if can_shoot: shoot_at_player()
+signal shoot_anim_finished()
 
-func shoot_at_player():
-	can_shoot = false
-	var projectile = load("res://src/actors/scenes/bullet.tscn")
-	var projectile_instance = projectile.instance()
-	projectile_instance.position = castPoint.get_global_transform().get_origin()
-	projectile_instance.origin = "Enemy"
-	projectile_instance.shoot(castOrigin.rotation_degrees)
-	get_parent().add_child(projectile_instance)
-	yield(get_tree().create_timer(rate_of_fire),"timeout")
-	can_shoot = true
+func _on_AnimationPlayer_animation_finished(anim_name):
+	._on_AnimationPlayer_animation_finished(anim_name)
+	if anim_name == "shoot":
+		emit_signal("shoot_anim_finished")
+		timer = 0
 
+func _physics_process(delta):
+	if !can_shoot: timer += delta
+	if timer > RATE_OF_FIRE: 
+		timer = 0
+		can_shoot = true
+	elif state_machine.get_current_state() == "Alerted" and can_shoot:
+			if state_machine.is_player_in_sight and !state_machine.is_player_hidden:
+				state_machine.set_state("Shooting")
+				can_shoot = false

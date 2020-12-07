@@ -1,11 +1,8 @@
 extends State
 
-var enemy_controller
-
 var waypoints
 
 func enter(actor, _delta = 0.0):
-	enemy_controller = actor.get_controller()
 	actor.set_debug_text("IDLE")
 	waypoints = actor.get_waypoints()
 	actor.play_animation(waypoints.get_current_animation())

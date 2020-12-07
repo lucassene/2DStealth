@@ -304,10 +304,6 @@ func move_to_hide(area):
 		tween_fade(transition.OUT)
 		animation_player.play("jump_to_hide")
 
-#func _input(event):
-#	state_machine.handle_input(event)
-#	action_state_machine.handle_input(event)
-
 func can_player_hide():
 	return true if !in_enemy_sight else false
 

@@ -30,7 +30,7 @@ func update(actor,delta):
 		state_machine.set_state("Idle")
 	else:
 		var velocity = actor.move(delta,dir)
-		if velocity.y > 0.0: state_machine.set_state("Falling")
+		if velocity.y > 0.0 and !actor.is_on_floor(): state_machine.set_state("Falling")
 
 func get_x_movement():
 	return Input.get_action_strength("move_right") - Input.get_action_strength("move_left")

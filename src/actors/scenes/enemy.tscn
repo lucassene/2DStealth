@@ -1,16 +1,16 @@
-[gd_scene load_steps=21 format=2]
+[gd_scene load_steps=23 format=2]
 
 [ext_resource path="res://assets/enemy.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/Enemy/enemy.gd" type="Script" id=2]
 [ext_resource path="res://assets/fieldOfView.png" type="Texture" id=3]
 [ext_resource path="res://assets/warning.png" type="Texture" id=4]
 [ext_resource path="res://assets/danger.png" type="Texture" id=5]
-[ext_resource path="res://src/animations/patrol_E.tres" type="Animation" id=6]
-[ext_resource path="res://src/animations/patrol_W.tres" type="Animation" id=7]
+[ext_resource path="res://src/actors/scripts/Enemy/States/Jumping.gd" type="Script" id=6]
+[ext_resource path="res://src/actors/scripts/Enemy/States/Falling.gd" type="Script" id=7]
 [ext_resource path="res://src/animations/turn_EtoW.tres" type="Animation" id=8]
-[ext_resource path="res://src/animations/turn_WtoE.tres" type="Animation" id=9]
+[ext_resource path="res://src/utils/scenes/WorldDetector.tscn" type="PackedScene" id=9]
 [ext_resource path="res://src/animations/smoking-idle-E.tres" type="Animation" id=10]
-[ext_resource path="res://src/animations/smoking-idle-W.tres" type="Animation" id=11]
+[ext_resource path="res://src/actors/scripts/Enemy/States/Dead.gd" type="Script" id=11]
 [ext_resource path="res://src/actors/scripts/Enemy/EnemyFSM.gd" type="Script" id=12]
 [ext_resource path="res://src/actors/scripts/Enemy/States/Patrolling.gd" type="Script" id=13]
 [ext_resource path="res://src/actors/scripts/Enemy/States/Searching.gd" type="Script" id=14]
@@ -25,6 +25,34 @@ height = 96.0
 [sub_resource type="CapsuleShape2D" id=2]
 radius = 54.0
 height = 80.0
+
+[sub_resource type="Animation" id=5]
+resource_name = "dying"
+length = 0.7
+tracks/0/type = "value"
+tracks/0/path = NodePath("sprite:rotation_degrees")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.3, 0.5, 0.7 ),
+"transitions": PoolRealArray( 1, 1, 1, 1 ),
+"update": 0,
+"values": [ 0.0, -90.0, -80.0, -90.0 ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("sprite:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 0.3, 0.5, 0.7 ),
+"transitions": PoolRealArray( 1, 1, 1, 1 ),
+"update": 0,
+"values": [ Vector2( 0, -96 ), Vector2( -32, -32 ), Vector2( -32, -36 ), Vector2( -32, -32 ) ]
+}
 
 [sub_resource type="Animation" id=3]
 resource_name = "patrol"
@@ -43,6 +71,22 @@ tracks/0/keys = {
 "values": [ 1.0, 6.0, -3.0, 1.0 ]
 }
 
+[sub_resource type="Animation" id=4]
+resource_name = "shoot"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/path = NodePath("sprite:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2, 0.3, 0.5 ),
+"transitions": PoolRealArray( 1, 1, 1, 1, 1 ),
+"update": 0,
+"values": [ Vector2( 0, -96 ), Vector2( -10, -96 ), Vector2( -5, -96 ), Vector2( -10, -96 ), Vector2( 0, -96 ) ]
+}
+
 [node name="Enemy" type="KinematicBody2D" groups=[
 "Enemy",
 ]]
@@ -54,42 +98,8 @@ script = ExtResource( 2 )
 position = Vector2( 0, -96 )
 texture = ExtResource( 1 )
 
-[node name="RayCasts" type="Node2D" parent="sprite"]
+[node name="WorldDetector" parent="sprite" instance=ExtResource( 9 )]
 position = Vector2( 0, 96 )
-
-[node name="leftBorder" type="RayCast2D" parent="sprite/RayCasts"]
-position = Vector2( -48, 0 )
-enabled = true
-collision_mask = 4
-
-[node name="rightBorder" type="RayCast2D" parent="sprite/RayCasts"]
-position = Vector2( 50, 0 )
-enabled = true
-collision_mask = 4
-
-[node name="bottomRightRC" type="RayCast2D" parent="sprite/RayCasts"]
-position = Vector2( 0, -56 )
-enabled = true
-cast_to = Vector2( 100, 0 )
-collision_mask = 4
-
-[node name="bottomLeftRC" type="RayCast2D" parent="sprite/RayCasts"]
-position = Vector2( 0, -56 )
-enabled = true
-cast_to = Vector2( -100, 0 )
-collision_mask = 4
-
-[node name="topRightRC" type="RayCast2D" parent="sprite/RayCasts"]
-position = Vector2( 0, -128 )
-enabled = true
-cast_to = Vector2( 150, 0 )
-collision_mask = 4
-
-[node name="topLeftRC" type="RayCast2D" parent="sprite/RayCasts"]
-position = Vector2( 0, -128 )
-enabled = true
-cast_to = Vector2( -150, 0 )
-collision_mask = 4
 
 [node name="castOrigin" type="Position2D" parent="sprite"]
 position = Vector2( 0, -48 )
@@ -104,7 +114,7 @@ position = Vector2( 64, 0 )
 position = Vector2( 48, 0 )
 collision_layer = 2
 
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="sprite/castOrigin/fieldOfView"]
+[node name="SightCollision" type="CollisionPolygon2D" parent="sprite/castOrigin/fieldOfView"]
 polygon = PoolVector2Array( 0, 0, 400, -200, 400, 200 )
 
 [node name="Sprite" type="Sprite" parent="sprite/castOrigin/fieldOfView"]
@@ -112,7 +122,7 @@ position = Vector2( 210, 0.5 )
 scale = Vector2( 1.5, 1.4 )
 texture = ExtResource( 3 )
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
 position = Vector2( 0, -92 )
 z_index = 1
 shape = SubResource( 1 )
@@ -126,7 +136,7 @@ scale = Vector2( 80, 12 )
 ]]
 collision_layer = 2147483650
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerDetector"]
+[node name="PlayerDetectorCollision" type="CollisionShape2D" parent="PlayerDetector"]
 position = Vector2( 0, -93 )
 shape = SubResource( 2 )
 
@@ -152,13 +162,11 @@ position = Vector2( 0, -256 )
 texture = ExtResource( 5 )
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/dying = SubResource( 5 )
 anims/patrol = SubResource( 3 )
-anims/patrol_E = ExtResource( 6 )
-anims/patrol_W = ExtResource( 7 )
+anims/shoot = SubResource( 4 )
 anims/smoking = ExtResource( 10 )
-anims/smoking_W = ExtResource( 11 )
 anims/turn = ExtResource( 8 )
-anims/turn_E = ExtResource( 9 )
 
 [node name="Tween" type="Tween" parent="."]
 
@@ -179,6 +187,15 @@ script = ExtResource( 13 )
 
 [node name="Searching" type="Node" parent="StateMachine"]
 script = ExtResource( 14 )
+
+[node name="Jumping" type="Node" parent="StateMachine"]
+script = ExtResource( 6 )
+
+[node name="Falling" type="Node" parent="StateMachine"]
+script = ExtResource( 7 )
+
+[node name="Dead" type="Node" parent="StateMachine"]
+script = ExtResource( 11 )
 [connection signal="on_idle_anim_finished" from="." to="StateMachine/Idle" method="_on_idle_anim_finished"]
 [connection signal="on_player_contact" from="." to="StateMachine" method="_on_player_contact"]
 [connection signal="on_player_detected" from="." to="StateMachine" method="_on_player_detected"]
