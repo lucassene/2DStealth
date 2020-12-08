@@ -5,6 +5,9 @@ onready var actor = owner
 onready var state_machine setget set_state_machine
 onready var action_state_machine setget set_action_state_machine
 
+signal on_jump_released(actor)
+signal on_wallrun_released(actor)
+
 func set_state_machine(new_value):
 	state_machine = new_value
 	
@@ -34,22 +37,25 @@ func exit_crouch(_param):
 	state_machine.set_state("Idle")
 
 func jump(_param):
-	if actor.is_on_floor():
+	if actor.is_on_floor() or actor.is_on_coyote_time() or state_machine.ladder:
 		state_machine.set_state("Jumping")
 		return
 	elif state_machine.wall:
 		state_machine.set_state("Jumping")
-		if !state_machine.get_previous_state() == "Wall_Run":
+		if !state_machine.get_previous_state() == "Wall_Run" and !state_machine.get_previous_state() == "Wall_Slide":
 			actor.move_to_wall(state_machine.wall)
 
+func stop_jump(_param):
+	emit_signal("on_jump_released",actor)
+
 func set_running_speed(_param):
-	state_machine.set_new_speed(state_machine.states.Running.get_speed())
+	state_machine.set_x_speed(state_machine.states.Running.get_speed())
 
 func enter_running(_param):
 	state_machine.set_state("Running")
 
 func set_walking_speed(_param):
-	state_machine.set_new_speed(state_machine.states.Walking.get_speed())
+	state_machine.set_x_speed(state_machine.states.Walking.get_speed())
 
 func enter_walking(_param):
 	state_machine.set_state("Walking")
@@ -86,6 +92,7 @@ func enter_falling(_param):
 	state_machine.set_state("Falling")
 
 func on_key_up(_param):
+	print(state_machine.wall)
 	if state_machine.ladder:
 		if !state_machine.is_player_on_ladder_top():
 			state_machine.set_climb_state(state_machine.CLIMB_DIR.UP)
@@ -95,6 +102,9 @@ func on_key_up(_param):
 		return
 	if actor.can_change_layer:
 		actor.change_layer()
+
+func stop_wall_run(_param):
+	emit_signal("on_wallrun_released",actor)
 
 func set_melee_attack(_param):
 	action_state_machine.set_melee_attack_state()
@@ -110,4 +120,7 @@ func focus_camera_left(_param):
 
 func return_camera_position(_param):
 	actor.tween_camera(actor.transition.IN)
+	
+func update_facing(param):
+	actor.set_facing(param)
 

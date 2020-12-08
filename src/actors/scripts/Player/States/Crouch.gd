@@ -5,8 +5,7 @@ var player_controller
 func enter(actor,_delta = 0.0):
 	player_controller = actor.get_player_controller()
 	actor.set_debug_text("CROUCH")
-	state_machine.set_new_speed(state_machine.states.Crouch_Walk.get_speed())
-	actor.set_current_speed(state_machine.states.Crouch_Walk.get_speed())
+	state_machine.set_x_speed(state_machine.states.Crouch_Walk.get_speed())
 
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"crouch","exit_crouch"): return

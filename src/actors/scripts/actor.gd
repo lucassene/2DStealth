@@ -1,7 +1,7 @@
 extends KinematicBody2D
 class_name Actor
 
-export var gravity = 3200.0
+export var gravity = 3200.0 setget set_gravity,get_gravity
 export var max_gspeed = 4000.0
 
 const FLOOR_NORMAL = Vector2.UP
@@ -14,6 +14,12 @@ var snap_vector = SNAP_DIRECTION * SNAP_LENGTH setget , get_snap_vector
 
 var actualState
 var priorState
+
+func set_gravity(value):
+	gravity = value
+
+func get_gravity():
+	return gravity
 
 func _physics_process(_delta):
 	return

@@ -8,7 +8,8 @@ var ledge = null
 var hideout = null
 
 var can_grab_ledge = true setget set_can_grab_ledge,get_can_grab_ledge
-var new_speed = 0.0 setget set_new_speed,get_new_speed
+var x_speed = 0.0 setget set_x_speed,get_x_speed
+var y_speed = 0.0 setget set_y_speed,get_y_speed
 
 enum CLIMB_DIR {
 	UP,
@@ -21,24 +22,33 @@ func set_can_grab_ledge(new_value):
 func get_can_grab_ledge():
 	return can_grab_ledge
 
-func set_new_speed(new_value):
-	new_speed = new_value
+func set_x_speed(new_value):
+	x_speed = new_value
 
-func get_new_speed():
-	return new_speed
+func get_x_speed():
+	return x_speed
+
+func set_y_speed(new_value):
+	y_speed = new_value
+
+func get_y_speed():
+	return y_speed
 
 func _on_Player_on_ladder_entered(area):
 	ladder = area
 
 func _on_Player_on_ladder_exited():
 	if get_current_state() == "Climbing":
+		actor.velocity.y = 0
 		set_state("Idle")
 	ladder = null
 
 func _on_Player_on_wall_entered(area):
+	print("entrou")
 	wall = area
 
 func _on_Player_on_wall_exited():
+	print("saiu")
 	wall = null
 
 func _on_Player_on_ledge_entered(area):
@@ -59,27 +69,28 @@ func _on_Player_on_hideout_exited():
 	hideout = null
 	if current_state == "Hiding": set_movement_state()
 
+func _on_CoyoteTimer_timeout():
+	#reset_gravity()
+	set_state("Falling")
+
 func initialize(first_state):
 	.initialize(first_state)
 	player_controller = actor.get_player_controller()
 	player_controller.set_state_machine(self)
-	new_speed = states.Walking.get_speed()
-	actor.set_current_speed(new_speed)
-	actor.set_previous_speed(new_speed)
-	actor.set_current_y_speed(states.Jumping.get_speed())
+	x_speed = states.Walking.get_speed()
+	states.Jumping.set_gravity(actor)
 
 func update(delta):
 	.update(delta)
 
 func set_movement_state():
-	actor.set_current_speed(new_speed)
-	if new_speed == states.Running.get_speed():
+	if x_speed == states.Running.get_speed():
 		set_state("Running")
 		return
-	if new_speed == states.Walking.get_speed():
+	if x_speed == states.Walking.get_speed():
 		set_state("Walking")
 		return
-	if new_speed == states.Crouch_Walk.get_speed():
+	if x_speed == states.Crouch_Walk.get_speed():
 		set_state("Crouch")
 		return
 
@@ -108,5 +119,20 @@ func set_hiding_state():
 	actor.set_current_speed(states.Crouch_Walk.get_speed())
 	actor.move_to_hide(hideout)
 
+func reset_gravity():
+	states.Jumping.set_gravity(actor)
+
 func is_player_on_ladder_top():
 	return true if ladder.position.y > actor.position.y else false
+
+func is_in_grounded_state():
+	if current_state == "Walking" or current_state == "Running" or current_state == "Crouch_Walk" or current_state == "Idle" or current_state == "Crouch" or current_state == "Crouch_Walk":
+		return true
+	else:
+		return false
+
+func is_in_airbone_state():
+	if current_state == "Jumping" or current_state == "Falling" or current_state == "Wall_Run" or current_state == "Wall_Slide":
+		return true
+	else:
+		return false

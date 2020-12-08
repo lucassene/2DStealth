@@ -5,6 +5,7 @@ var player_controller
 func enter(actor,_delta = 0.0):
 	player_controller = actor.get_player_controller()
 	actor.set_debug_text("IDLE")
+	state_machine.reset_gravity()
 
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"crouch","enter_crouch"): return
@@ -19,7 +20,7 @@ func handle_input(event):
 
 func update(actor,delta):
 	var dir = Vector2.ZERO
-	actor.move(delta,dir)
+	actor.move(delta,dir,state_machine.get_x_speed())
 	if get_x_movement() != 0: state_machine.set_movement_state()
 	if actor.velocity.y > 0: state_machine.set_state("Falling")
 

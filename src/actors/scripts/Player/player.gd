@@ -9,6 +9,7 @@ onready var meleeArea = $Areas/meleeArea
 onready var noiseArea = $Areas/noiseArea
 onready var animation_player = $AnimationPlayer
 onready var noiseStepTimer: Timer = $Timers/noiseStepTimer
+onready var coyote_timer: Timer = $Timers/CoyoteTimer
 onready var positionTween = $Tweens/PositionTween
 onready var fadeTween = $Tweens/FadeTween
 onready var cameraTween = $Tweens/CameraTween
@@ -17,6 +18,7 @@ onready var bottomRightRC: RayCast2D = $RayCasts/bottomRightRC
 onready var bottomLeftRC: RayCast2D = $RayCasts/bottomLeftRC2
 onready var topRightRC: RayCast2D = $RayCasts/topRightRC
 onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
+onready var floor_detector: RayCast2D = $RayCasts/floorRC
 onready var sprite = $sprite
 onready var camera = $Camera2D
 onready var state_machine = $StateMachine setget ,get_state_machine
@@ -25,7 +27,6 @@ onready var player_controller = $PlayerController setget ,get_player_controller
 
 onready var label = $Label
 onready var actionLabel = $ActionLabel
-onready var current_speed setget set_current_speed, get_current_speed
 onready var previous_speed setget set_previous_speed, get_previous_speed
 onready var current_y_speed setget set_current_y_speed, get_current_y_speed
 
@@ -49,7 +50,6 @@ signal on_hide()
 signal on_unhide()
 signal on_attack_ended()
 signal on_wall_jump_ready()
-#signal on_shooting_ended()
 
 enum transition {
 	IN,
@@ -85,13 +85,6 @@ func get_action_state_machine():
 
 func get_player_controller():
 	return player_controller
-
-func set_current_speed(new_value):
-	set_previous_speed(current_speed)
-	current_speed = new_value
-
-func get_current_speed():
-	return current_speed
 
 func set_previous_speed(new_value):
 	previous_speed = new_value
@@ -232,21 +225,38 @@ func _unhandled_input(event):
 	state_machine.handle_input(event)
 	action_state_machine.handle_input(event)
 
-func move(delta, dir, vector = snap_vector):
-	velocity = calculate_move_velocity(velocity, dir, current_y_speed, delta)
-	set_facing()
-	velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
+func move(delta, dir, x_speed, y_speed = 0, vector = snap_vector):
+	velocity = calculate_move_velocity(velocity, dir, x_speed, y_speed, delta)
+	set_facing(dir)
+	if !floor_detector.is_colliding():
+		velocity = move_and_slide(velocity,FLOOR_NORMAL)
+	else:
+		velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
 	return velocity
 
-func calculate_move_velocity(linear_velocity, direction, up_speed, delta):
+func calculate_move_velocity(linear_velocity, direction, x_speed, y_speed, delta):
 	var out = linear_velocity
-	out.x = current_speed * direction.x
+	out.x = x_speed * direction.x
 	out.y += gravity * delta
+	if !coyote_timer.is_stopped() and state_machine.is_in_grounded_state():
+		out.y = 0
 	if direction.y != 0: 
-		out.y = up_speed * direction.y
+		out.y = y_speed * direction.y
 	elif state_machine.get_current_state() == "Climbing":
 		out.y = 0
 	return out
+
+func start_coyote_time():
+	coyote_timer.start()
+
+func stop_coyote_time():
+	coyote_timer.stop()
+
+func reset_gravity():
+	set_gravity(state_machine.reset_gravity())
+
+func is_on_coyote_time():
+	return !coyote_timer.is_stopped()
 
 func enter_hiding_state():
 	move_to_hide(state_machine.hideout)
@@ -382,11 +392,14 @@ func on_hit():
 func is_hidden():
 	return true if state_machine.get_current_state() == "Hiding" else false
 
-func set_facing():
-	if velocity.x < 0:
-		facing = Vector2.LEFT
-	elif velocity.x > 0: 
-		facing = Vector2.RIGHT
+func set_facing(vector):
+	if vector.x != 0:
+		if vector.x < 0:
+			vector.x = -1
+		elif vector.x > 0:
+			vector.x = 1
+		vector.y = 0
+		facing = vector
 	set_cast_point_side()
 
 func enter_layer(layer_bit):
