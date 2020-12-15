@@ -7,7 +7,8 @@ export var max_gspeed = 4000.0
 const FLOOR_NORMAL = Vector2.UP
 const SNAP_DIRECTION = Vector2.DOWN
 const SNAP_LENGTH = 32.0
-const SLOPE_THRESHOLD = deg2rad(46)
+const SLOPE_THRESHOLD = deg2rad(45)
+const DISTANCE_THRESHOLD = 5.0
 
 var velocity = Vector2.ZERO
 var snap_vector = SNAP_DIRECTION * SNAP_LENGTH setget , get_snap_vector

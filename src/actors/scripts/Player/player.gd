@@ -7,6 +7,7 @@ onready var castOrigin = $castOrigin
 onready var meleeSprite = $Areas/meleeArea/meleeSlash
 onready var meleeArea = $Areas/meleeArea
 onready var noiseArea = $Areas/noiseArea
+onready var interact_area = $Areas/InteractArea
 onready var animation_player = $AnimationPlayer
 onready var noiseStepTimer: Timer = $Timers/noiseStepTimer
 onready var coyote_timer: Timer = $Timers/CoyoteTimer
@@ -14,11 +15,7 @@ onready var positionTween = $Tweens/PositionTween
 onready var fadeTween = $Tweens/FadeTween
 onready var cameraTween = $Tweens/CameraTween
 onready var noiseTween: Tween = $Tweens/NoiseTween
-onready var bottomRightRC: RayCast2D = $RayCasts/bottomRightRC
-onready var bottomLeftRC: RayCast2D = $RayCasts/bottomLeftRC2
-onready var topRightRC: RayCast2D = $RayCasts/topRightRC
-onready var topLeftRC: RayCast2D = $RayCasts/topLeftRC
-onready var floor_detector: RayCast2D = $RayCasts/floorRC
+onready var world_detector = $WorldDetector
 onready var sprite = $sprite
 onready var camera = $Camera2D
 onready var state_machine = $StateMachine setget ,get_state_machine
@@ -41,15 +38,16 @@ export var jump_noise = Vector2(0.75,0.75)
 signal on_ladder_entered(area)
 signal on_ladder_exited()
 signal on_wall_entered(area)
-signal on_wall_exited()
+signal on_wall_exited(area)
 signal on_ledge_entered(area)
 signal on_ledge_exited()
 signal on_hideout_entered(area)
-signal on_hideout_exited()
+signal on_hideout_exited(area)
 signal on_hide()
 signal on_unhide()
 signal on_attack_ended()
-signal on_wall_jump_ready()
+signal on_change_layer()
+signal on_arrived_to_target()
 
 enum transition {
 	IN,
@@ -67,11 +65,13 @@ var is_going_to_hide = false
 var is_going_to_unhide = false
 var climbing_ledge = false
 var is_camera_focusing = false
+var is_moving_to_target = false
+var target_position = Vector2.ZERO
 
 var actual_layer = 0
 var last_layer: Area2D
 
-var facing = Vector2.RIGHT
+var facing = Vector2.RIGHT setget set_facing,get_facing
 var sprite_size
 
 var is_enemy_alerted = false
@@ -98,17 +98,24 @@ func set_current_y_speed(new_value):
 func get_current_y_speed():
 	return current_y_speed
 
+func set_facing(vector):
+	if vector.x != 0:
+		if vector.x < 0:
+			vector.x = -1
+		elif vector.x > 0:
+			vector.x = 1
+		vector.y = 0
+		facing = vector
+	turn()
+
+func get_facing():
+	return facing
+
 func set_debug_text(text):
 	label.text = String(facing.x) + " | " + text
 
 func set_action_text(text):
 	actionLabel.text = text
-
-func _ready():
-	Global.player = self
-	sprite_size = sprite.get_texture().get_size().x
-	state_machine.initialize("Idle")
-	action_state_machine.initialize(null)
 
 func _process(_delta):
 	# DEV ONLY
@@ -117,10 +124,13 @@ func _process(_delta):
 func set_time_scale():
 	if Input.is_action_just_pressed("time_stop"):
 		Engine.time_scale = 0.0
+		set_physics_process(false)
 	if Input.is_action_just_pressed("slow-motion"):
 		Engine.time_scale = 0.15
+		set_physics_process(true)
 	if Input.is_action_just_pressed("normal_time"):
 		Engine.time_scale = 1.0
+		set_physics_process(true)
 
 func _on_ladder_area_entered(area):
 	emit_signal("on_ladder_entered",area)
@@ -132,9 +142,9 @@ func _on_trigger_area_entered(area):
 	if area.is_in_group("TriggerArea"):
 		match area.get_area_type():
 			area.type.PARKOUR_WALL:
-				if can_wallrun_check(area): 
-					emit_signal("on_wall_entered",area)
-					return
+#				if check_pos_to_wall(area): 
+				emit_signal("on_wall_entered",area)
+				return
 			area.type.HIDEOUT:
 				emit_signal("on_hideout_entered",area)
 				return
@@ -148,10 +158,10 @@ func _on_trigger_area_exited(area):
 	if area.is_in_group("TriggerArea"):
 		match area.get_area_type():
 			area.type.PARKOUR_WALL:
-				emit_signal("on_wall_exited")
+				emit_signal("on_wall_exited",area)
 				return
 			area.type.HIDEOUT:
-				emit_signal("on_hideout_exited")
+				emit_signal("on_hideout_exited",area)
 				return
 			area.type.LAYER_CHANGE:
 				can_change_layer = false
@@ -203,12 +213,10 @@ func _on_noiseStepTimer_timeout():
 	pass # Replace with function body.
 
 func _on_PositionTween_completed(_object, _key):
-	if state_machine.get_current_state() == "On_Ledge" and climbing_ledge:
+	if climbing_ledge:
 		tween_position(Vector2(position.x + sprite_size * 1.25 * facing.x,position.y),0.25)
+		state_machine.set_state("Idle")
 		climbing_ledge = false
-		return
-	if state_machine.get_current_state() == "Jumping":
-		emit_signal("on_wall_jump_ready")
 		return
 
 func _on_enemy_alerted():
@@ -217,7 +225,16 @@ func _on_enemy_alerted():
 func _on_enemy_not_alerted():
 	is_enemy_alerted = false
 
+func _ready():
+	Global.player = self
+	sprite_size = sprite.get_texture().get_size().x
+	state_machine.initialize("Idle")
+	action_state_machine.initialize(null)
+
 func _physics_process(delta):
+	if is_moving_to_target:
+		move_to_target()
+		return
 	state_machine.update(delta)
 	action_state_machine.update(delta)
 
@@ -228,7 +245,7 @@ func _unhandled_input(event):
 func move(delta, dir, x_speed, y_speed = 0, vector = snap_vector):
 	velocity = calculate_move_velocity(velocity, dir, x_speed, y_speed, delta)
 	set_facing(dir)
-	if !floor_detector.is_colliding():
+	if world_detector.is_in_air():
 		velocity = move_and_slide(velocity,FLOOR_NORMAL)
 	else:
 		velocity = move_and_slide_with_snap(velocity, vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
@@ -272,30 +289,26 @@ func can_hide():
 	else:
 		return true
 
-func is_on_ledge():
-	if bottomLeftRC.is_colliding() and !topLeftRC.is_colliding():
-		return true
-	if bottomRightRC.is_colliding() and !topRightRC.is_colliding():
-		return true
-	return false
-
-func move_to_ledge(area):
-	if is_on_ledge():
-		tween_position(Vector2(get_area_offset_position(area,sprite_size/2),position.y),0.1)
-
-func get_area_offset_position(area, offset = 0):
-	return area.get_global_position().x + (offset * facing.x * -1)
-
-func move_to_wall(area):
-	tween_position(Vector2(get_area_offset_position(area),position.y),0.1)
-
-func move_to_ladder(area):
-	if position.x != area.position.x:
-		tween_position(Vector2(area.position.x,position.y),0.2)
+func move_to_area(area,offset = sprite_size/2):
+	target_position = Vector2(get_area_offset_position(area,offset),global_position.y)
+	is_moving_to_target = true
 
 func move_over_ledge(area):
 	climbing_ledge = true
 	tween_position(Vector2(position.x,area.get_global_position().y),0.3)
+
+func get_area_offset_position(area, offset = 0):
+	return area.global_position.x + (offset * facing.x * -1)
+
+func move_to_target():
+	if global_position.distance_to(target_position) < DISTANCE_THRESHOLD:
+		is_moving_to_target = false
+		emit_signal("on_arrived_to_target")
+		return
+	var desired_velocity = (target_position - global_position).normalized() * state_machine.get_x_speed()
+	var steering = (desired_velocity - velocity)
+	velocity = velocity + steering
+	velocity = move_and_slide_with_snap(velocity, snap_vector, FLOOR_NORMAL, true, 4, SLOPE_THRESHOLD)
 
 func move_to_hide(area):
 	z_index = area.get_area_z_index()
@@ -317,6 +330,12 @@ func move_to_hide(area):
 func can_player_hide():
 	return true if !in_enemy_sight else false
 
+func can_wall_jump(area):
+	var distance = abs(global_position.x) - abs(area.global_position.x)
+	if abs(distance) < 5.0:
+		return true
+	return false
+
 func make_melee_attack():
 	animation_player.play("meleeSlash")
 
@@ -328,36 +347,55 @@ func make_ranged_attack():
 	get_parent().add_child(projectile_instance)
 
 func change_layer():
+	emit_signal("on_change_layer")
 	change_layer_pressed = true
-	enter_layer(last_layer.get_layer_bit())
+	#enter_layer(last_layer.get_layer_bit())
 
-func can_wallrun_check(area):
+func check_pos_to_wall(area):
 	var can_wallrun = false
 	if area:
-		if facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area):
+		if facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area,10):
 				can_wallrun = true
-		if facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area):
+		if facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area,10):
 				can_wallrun = true
 	return can_wallrun
 
 func can_grab_check(area):
-	if facing == Vector2.LEFT and area.get_enter_vector() == Vector2.LEFT and position.x >= get_area_offset_position(area,sprite_size/2):
-			return true
-	if facing == Vector2.RIGHT and area.get_enter_vector() == Vector2.RIGHT and position.x <= get_area_offset_position(area,sprite_size/2):
-			return true
-	return false
+	if !world_detector.can_grab_ledge(): return false
+	if facing == Vector2.LEFT and position.x >= get_area_offset_position(area):
+		return true
+	elif facing == Vector2.RIGHT and position.x <= get_area_offset_position(area):
+		return true
+	else: return false
 
-func set_cast_point_side():
+func turn():
 	if facing == Vector2.RIGHT:
 		castOrigin.rotation_degrees = 0
 		meleeArea.transform.origin.x = 96
 		meleeSprite.flip_h = false
 		meleeSprite.flip_v = false
+		world_detector.scale.x = 1.0
 	else: 
 		castOrigin.rotation_degrees = 180
 		meleeArea.transform.origin.x = -96
 		meleeSprite.flip_h = true
 		meleeSprite.flip_v = true
+		world_detector.scale.x = -1.0
+
+func update_interact_area(state):
+	match state:
+		"Idle","Crouch":
+			interact_area.scale.x = 1.0
+			return
+		"Crouch_Walk":
+			interact_area.scale.x = 1.15
+			return
+		"Walking":
+			interact_area.scale.x = 1.25
+			return
+		"Running":
+			interact_area.scale.x = 1.5
+			return
 
 func tween_position(new_position,time):
 	positionTween.interpolate_property(self,"position",Vector2(position.x,position.y),new_position,time,positionTween.TRANS_LINEAR,positionTween.EASE_IN_OUT)
@@ -392,16 +430,6 @@ func on_hit():
 func is_hidden():
 	return true if state_machine.get_current_state() == "Hiding" else false
 
-func set_facing(vector):
-	if vector.x != 0:
-		if vector.x < 0:
-			vector.x = -1
-		elif vector.x > 0:
-			vector.x = 1
-		vector.y = 0
-		facing = vector
-	set_cast_point_side()
-
 func enter_layer(layer_bit):
 	if last_layer.can_enter_layer():
 		actual_layer = layer_bit
@@ -417,16 +445,5 @@ func exit_layer(layer_bit):
 		actual_layer = 0
 		set_collision_mask_bit(layer_bit,false)
 
-func enable_ray_casts(dir, value):
-	if value:
-		if dir.x < 0:
-			bottomLeftRC.enabled = value
-			topLeftRC.enabled = value
-		elif dir.x > 0:
-			bottomRightRC.enabled = value
-			topRightRC.enabled = value
-	else:
-		bottomLeftRC.enabled = value
-		topLeftRC.enabled = value
-		bottomRightRC.enabled = value
-		topRightRC.enabled = value
+func enable_ray_casts(value):
+	world_detector.enabled(value)

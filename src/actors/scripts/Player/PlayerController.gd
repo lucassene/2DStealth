@@ -33,7 +33,7 @@ func enter_crouch_walk(_param):
 	state_machine.set_state("Crouch_Walk")
 
 func exit_crouch(_param):
-	actor.set_current_speed(actor.get_previous_speed())
+	state_machine.set_x_speed(state_machine.states.Walking.get_max_speed())
 	state_machine.set_state("Idle")
 
 func jump(_param):
@@ -42,20 +42,23 @@ func jump(_param):
 		return
 	elif state_machine.wall:
 		state_machine.set_state("Jumping")
-		if !state_machine.get_previous_state() == "Wall_Run" and !state_machine.get_previous_state() == "Wall_Slide":
-			actor.move_to_wall(state_machine.wall)
+
+func wall_jump(_param):
+	if state_machine.wall and actor.check_pos_to_wall(state_machine.wall):
+		state_machine.set_state("Jumping")
+		actor.move_to_area(state_machine.wall)
 
 func stop_jump(_param):
 	emit_signal("on_jump_released",actor)
 
 func set_running_speed(_param):
-	state_machine.set_x_speed(state_machine.states.Running.get_speed())
+	state_machine.set_x_speed(state_machine.states.Running.get_max_speed())
 
 func enter_running(_param):
 	state_machine.set_state("Running")
 
 func set_walking_speed(_param):
-	state_machine.set_x_speed(state_machine.states.Walking.get_speed())
+	state_machine.set_x_speed(state_machine.states.Walking.get_max_speed())
 
 func enter_walking(_param):
 	state_machine.set_state("Walking")
@@ -92,7 +95,6 @@ func enter_falling(_param):
 	state_machine.set_state("Falling")
 
 func on_key_up(_param):
-	print(state_machine.wall)
 	if state_machine.ladder:
 		if !state_machine.is_player_on_ladder_top():
 			state_machine.set_climb_state(state_machine.CLIMB_DIR.UP)

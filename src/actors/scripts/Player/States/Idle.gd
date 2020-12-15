@@ -6,6 +6,7 @@ func enter(actor,_delta = 0.0):
 	player_controller = actor.get_player_controller()
 	actor.set_debug_text("IDLE")
 	state_machine.reset_gravity()
+	state_machine.set_previous_ledge(null)
 
 func handle_input(event):
 	if player_controller.check_input_pressed(event,"crouch","enter_crouch"): return

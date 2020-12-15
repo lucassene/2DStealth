@@ -162,6 +162,7 @@ camera_focus_right={
 2d_physics/layer_5="one_way_platforms"
 2d_physics/layer_6="world_layer_1"
 2d_physics/layer_7="world_layer_2"
+2d_physics/layer_8="player_interact"
 
 [rendering]
 

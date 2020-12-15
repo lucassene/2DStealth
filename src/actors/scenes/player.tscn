@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=2]
+[gd_scene load_steps=30 format=2]
 
 [ext_resource path="res://assets/player.png" type="Texture" id=1]
 [ext_resource path="res://src/actors/scripts/Player/player.gd" type="Script" id=2]
@@ -23,6 +23,7 @@
 [ext_resource path="res://src/actors/scripts/Player/States/Shooting.gd" type="Script" id=21]
 [ext_resource path="res://src/actors/scripts/Player/ActionStateMachine.gd" type="Script" id=22]
 [ext_resource path="res://src/actors/scripts/Player/States/Wall_Slide.gd" type="Script" id=23]
+[ext_resource path="res://src/utils/scenes/PL_WorldDetector.tscn" type="PackedScene" id=24]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 48.0
@@ -38,11 +39,14 @@ extents = Vector2( 52, 100 )
 [sub_resource type="CircleShape2D" id=4]
 radius = 195.0
 
+[sub_resource type="RectangleShape2D" id=5]
+extents = Vector2( 74, 96 )
+
 [node name="Player" type="KinematicBody2D" groups=[
 "Player",
 ]]
 z_index = 1
-collision_mask = 22
+collision_mask = 118
 script = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
@@ -153,32 +157,18 @@ texture = ExtResource( 6 )
 modulate = Color( 0.992157, 0.815686, 0.0156863, 1 )
 shape = SubResource( 4 )
 
-[node name="RayCasts" type="Node2D" parent="."]
+[node name="InteractArea" type="Area2D" parent="Areas" groups=[
+"PlayerArea",
+]]
+monitoring = false
+collision_layer = 128
+collision_mask = 0
 
-[node name="bottomRightRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 48, -96 )
-cast_to = Vector2( 20, 0 )
-collision_mask = 16
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/InteractArea"]
+position = Vector2( 0, -96 )
+shape = SubResource( 5 )
 
-[node name="bottomLeftRC2" type="RayCast2D" parent="RayCasts"]
-position = Vector2( -48, -96 )
-cast_to = Vector2( -20, 0 )
-collision_mask = 16
-
-[node name="topRightRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( 36, -172 )
-cast_to = Vector2( 60, 0 )
-collision_mask = 16
-
-[node name="topLeftRC" type="RayCast2D" parent="RayCasts"]
-position = Vector2( -36, -172 )
-cast_to = Vector2( -60, 0 )
-collision_mask = 16
-
-[node name="floorRC" type="RayCast2D" parent="RayCasts"]
-enabled = true
-cast_to = Vector2( 0, 20 )
-collision_mask = 4
+[node name="WorldDetector" parent="." instance=ExtResource( 24 )]
 
 [node name="Tweens" type="Node" parent="."]
 
@@ -259,7 +249,6 @@ script = ExtResource( 20 )
 [connection signal="on_ledge_exited" from="." to="StateMachine" method="_on_Player_on_ledge_exited"]
 [connection signal="on_wall_entered" from="." to="StateMachine" method="_on_Player_on_wall_entered"]
 [connection signal="on_wall_exited" from="." to="StateMachine" method="_on_Player_on_wall_exited"]
-[connection signal="on_wall_jump_ready" from="." to="StateMachine/Jumping" method="_on_Player_on_wall_jump_ready"]
 [connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
 [connection signal="animation_started" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_started"]
 [connection signal="body_entered" from="Areas/meleeArea" to="." method="_on_meleeArea_body_entered"]
@@ -269,3 +258,5 @@ script = ExtResource( 20 )
 [connection signal="timeout" from="Timers/CoyoteTimer" to="StateMachine" method="_on_CoyoteTimer_timeout"]
 [connection signal="on_jump_released" from="PlayerController" to="StateMachine/Jumping" method="_on_jump_released"]
 [connection signal="on_wallrun_released" from="PlayerController" to="StateMachine/Wall_Run" method="_on_wallrun_released"]
+[connection signal="on_jump_pressed" from="StateMachine/Jumping" to="StateMachine/Falling" method="_on_jump_pressed"]
+[connection signal="on_wall_jump_ocurred" from="StateMachine/Jumping" to="StateMachine/Falling" method="_on_wall_jump_ocurred"]
