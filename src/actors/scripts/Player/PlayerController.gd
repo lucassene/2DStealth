@@ -40,7 +40,7 @@ func jump(_param):
 	if actor.is_on_floor() or actor.is_on_coyote_time() or state_machine.ladder:
 		state_machine.set_state("Jumping")
 		return
-	elif state_machine.wall:
+	elif state_machine.get_wall_to_run():
 		state_machine.set_state("Jumping")
 
 func wall_jump(_param):
@@ -99,11 +99,13 @@ func on_key_up(_param):
 		if !state_machine.is_player_on_ladder_top():
 			state_machine.set_climb_state(state_machine.CLIMB_DIR.UP)
 			return
-	if state_machine.wall:
-		state_machine.set_wall_run_state()
+	var wall = state_machine.get_wall_to_run()
+	if wall:
+		state_machine.set_wall_run_state(wall)
 		return
 	if actor.can_change_layer:
-		actor.change_layer()
+		actor.set_change_layer_pressed(true)
+		actor.change_layer(true)
 
 func stop_wall_run(_param):
 	emit_signal("on_wallrun_released",actor)

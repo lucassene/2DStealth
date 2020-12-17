@@ -3,8 +3,8 @@ extends StateMachine
 var player_controller
 
 var ladder = null
-var wall = null
-var previous_wall = null
+var first_wall = null
+var second_wall = null
 var current_ledge = null
 var previous_ledge = null setget set_previous_ledge
 var hideout = null
@@ -51,14 +51,16 @@ func _on_Player_on_ladder_exited():
 	ladder = null
 
 func _on_Player_on_wall_entered(area):
-	wall = area
-	print("entrou: " + area.name)
+	if first_wall and first_wall != area:
+		second_wall = first_wall
+	if !first_wall or first_wall != area:
+		first_wall = area
 
 func _on_Player_on_wall_exited(area):
-	if area == wall: 
-		print("saiu: " + area.name)
-		previous_wall = area
-		wall = null
+	if first_wall == area:
+		first_wall = null
+	if second_wall == area:
+		second_wall = null
 
 func _on_Player_on_ledge_entered(area):
 	current_ledge = area
@@ -119,15 +121,8 @@ func set_climb_state(dir):
 	actor.move_to_area(ladder,0)
 	set_state("Climbing")
 
-func set_wall_run_state():
-	print(previous_wall)
-	print(wall)
+func set_wall_run_state(wall):
 	if wall and actor.check_pos_to_wall(wall):
-		print("atual: " + wall.name)
-		actor.move_to_area(wall,0)
-		set_state("Wall_Run")
-	elif previous_wall and actor.check_pos_to_wall(previous_wall):
-		print("anterior: " + previous_wall.name)
 		actor.move_to_area(wall,0)
 		set_state("Wall_Run")
 
@@ -157,7 +152,14 @@ func is_in_grounded_state():
 		return true
 	else:
 		return false
-#
+
+func get_wall_to_run():
+	if first_wall and first_wall.get_enter_vector() == actor.get_facing():
+		return first_wall
+	if second_wall and second_wall.get_enter_vector() == actor.get_facing():
+		return second_wall
+	return null
+
 #func is_in_airbone_state():
 #	if current_state == "Jumping" or current_state == "Falling" or current_state == "Wall_Run" or current_state == "Wall_Slide":
 #		return true

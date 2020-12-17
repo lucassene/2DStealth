@@ -26,7 +26,7 @@
 [ext_resource path="res://src/utils/scenes/PL_WorldDetector.tscn" type="PackedScene" id=24]
 
 [sub_resource type="CapsuleShape2D" id=1]
-radius = 48.0
+radius = 43.0
 height = 96.0
 
 [sub_resource type="CapsuleShape2D" id=2]
@@ -50,7 +50,7 @@ collision_mask = 118
 script = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2( 0, -96 )
+position = Vector2( 0, -91 )
 z_index = 1
 shape = SubResource( 1 )
 
@@ -161,7 +161,7 @@ shape = SubResource( 4 )
 "PlayerArea",
 ]]
 monitoring = false
-collision_layer = 128
+collision_layer = 32
 collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/InteractArea"]

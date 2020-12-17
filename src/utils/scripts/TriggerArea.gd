@@ -8,9 +8,8 @@ enum layer {
 }
 
 enum physics_layer {
-	WORLD_LAYER_0 = 2,
-	WORLD_LAYER_1 = 5,
-	WORLD_LAYER_2 = 6
+	WORLD_LAYER_0 = 6,
+	WORLD_LAYER_1 = 7
 }
 
 enum type {
@@ -19,23 +18,16 @@ enum type {
 	LAYER_CHANGE,
 }
 
-enum traffic {
-	ENTRANCE,
-	EXIT
-}
-
 export var enter_side = Vector2.ZERO
 export(layer) var z_layer = layer.BACKGROUND 
 export(type) var area_type = type.PARKOUR_WALL
-export(traffic) var traffic_type = traffic.ENTRANCE
 export(physics_layer) var world_layer = physics_layer.WORLD_LAYER_0
 export var can_move = true setget ,can_player_move
 
 signal on_player_entered(area)
 signal on_player_exited(area)
-
-func _on_TriggerArea_body_exited(body):
-	pass
+signal on_can_change_layer()
+signal on_player_body_exited()
 
 func _on_TriggerArea_area_entered(area):
 	if area.is_in_group("PlayerArea"):
@@ -45,9 +37,21 @@ func _on_TriggerArea_area_exited(area):
 	if area.is_in_group("PlayerArea"):
 		emit_signal("on_player_exited",self)
 
+func _on_TriggerArea_body_entered(body):
+	if body.is_in_group("Player") and is_layer_area():
+		emit_signal("on_can_change_layer")
+		return
+
+func _on_TriggerArea_body_exited(body):
+	if body.is_in_group("Player") and is_layer_area():
+		emit_signal("on_player_body_exited")
+		return
+
 func _ready():
 	connect("on_player_entered",Global.player,"_on_trigger_area_entered")
 	connect("on_player_exited",Global.player,"_on_trigger_area_exited")
+	connect("on_can_change_layer",Global.player,"_on_can_change_layer")
+	connect("on_player_body_exited",Global.player,"_on_layer_reset")
 	
 func can_player_move():
 	return can_move
@@ -78,8 +82,6 @@ func get_right_point():
 func get_layer_bit():
 	return world_layer
 
-func can_enter_layer():
-	return true if traffic_type == traffic.ENTRANCE else false
+func is_layer_area():
+	return true if area_type == type.LAYER_CHANGE else false
 
-func can_exit_layer():
-	return true if traffic_type == traffic.EXIT else false

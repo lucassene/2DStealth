@@ -47,8 +47,9 @@ func enter(actor, delta = 0.0):
 	actor.enable_ray_casts(true)
 	jump_pressed = false
 	var movement = Vector2(0.0,-1.0)
-	if state_machine.wall and !actor.is_on_floor():
-		movement.x = state_machine.wall.get_enter_vector().x * -1.0
+	var wall = state_machine.get_wall_to_run()
+	if wall and !actor.is_on_floor():
+		movement.x = wall.get_enter_vector().x * -1.0
 	else:
 		movement.x = get_x_movement()
 	jump(actor,delta,movement)
@@ -67,7 +68,6 @@ func handle_input(event):
 	if player_controller.check_input_released(event,"dash","set_walking_speed"): return
 
 func update(actor,delta):
-	print(state_machine.wall)
 	var movement = Vector2.ZERO
 	movement = apply_force(movement)
 	var velocity = actor.move(delta,movement,state_machine.get_x_speed(),current_jump_speed,Vector2.ZERO)
@@ -77,9 +77,10 @@ func update(actor,delta):
 	if state_machine.current_ledge: 
 		state_machine.set_on_ledge_state()
 		return
-	if state_machine.wall and jump_pressed and actor.can_wall_jump(state_machine.wall) and is_above_height(actor):
+	var wall = state_machine.get_wall_to_run()
+	if wall and jump_pressed and actor.can_wall_jump(wall) and is_above_height(actor):
 		movement.y = -1.0
-		movement.x = state_machine.wall.get_enter_vector().x * -1.0
+		movement.x = wall.get_enter_vector().x * -1.0
 		jump(actor,delta,movement)
 		emit_signal("on_wall_jump_ocurred")
 		return

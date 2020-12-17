@@ -160,11 +160,15 @@ camera_focus_right={
 2d_physics/layer_3="world"
 2d_physics/layer_4="projectiles"
 2d_physics/layer_5="one_way_platforms"
-2d_physics/layer_6="world_layer_1"
-2d_physics/layer_7="world_layer_2"
-2d_physics/layer_8="player_interact"
+2d_physics/layer_6="player_interact"
+2d_physics/layer_7="world_layer_0"
+2d_physics/layer_8="world_layer_1"
 
 [rendering]
 
 quality/2d/use_pixel_snap=true
 environment/default_environment="res://default_env.tres"
+
+[world]
+
+2d/cell_size=96

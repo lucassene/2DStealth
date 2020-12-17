@@ -2,7 +2,6 @@
 
 [ext_resource path="res://src/utils/scripts/EN_WorldDetector.gd" type="Script" id=1]
 
-
 [node name="WorldDetector" type="Node2D"]
 script = ExtResource( 1 )
 
@@ -12,13 +11,13 @@ enabled = true
 collision_mask = 4
 
 [node name="bottomRC" type="RayCast2D" parent="."]
-position = Vector2( 0, -56 )
+position = Vector2( 0, -64 )
 enabled = true
 cast_to = Vector2( 150, 0 )
 collision_mask = 4
 
 [node name="topRC" type="RayCast2D" parent="."]
-position = Vector2( 0, -128 )
+position = Vector2( 0, -108 )
 enabled = true
-cast_to = Vector2( 180, 0 )
+cast_to = Vector2( 300, 0 )
 collision_mask = 4

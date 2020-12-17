@@ -9,9 +9,8 @@ extents = Vector2( 4, 6 )
 "Ledge",
 ]]
 monitorable = false
-collision_layer = 4
+collision_layer = 0
 script = ExtResource( 1 )
-enter_side = Vector2( 1, 0 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2( 0, 6 )

@@ -46,7 +46,7 @@ signal on_hideout_exited(area)
 signal on_hide()
 signal on_unhide()
 signal on_attack_ended()
-signal on_change_layer()
+signal on_change_layer(value,bit)
 signal on_arrived_to_target()
 
 enum transition {
@@ -55,7 +55,7 @@ enum transition {
 }
 
 var can_change_layer = false
-var change_layer_pressed = false
+var change_layer_pressed = false setget set_change_layer_pressed,get_change_layer_pressed
 var can_shoot = true
 var can_attack = true
 
@@ -111,6 +111,12 @@ func set_facing(vector):
 func get_facing():
 	return facing
 
+func get_change_layer_pressed():
+	return change_layer_pressed
+
+func set_change_layer_pressed(value):
+	change_layer_pressed = value
+
 func set_debug_text(text):
 	label.text = String(facing.x) + " | " + text
 
@@ -142,7 +148,6 @@ func _on_trigger_area_entered(area):
 	if area.is_in_group("TriggerArea"):
 		match area.get_area_type():
 			area.type.PARKOUR_WALL:
-#				if check_pos_to_wall(area): 
 				emit_signal("on_wall_entered",area)
 				return
 			area.type.HIDEOUT:
@@ -151,7 +156,6 @@ func _on_trigger_area_entered(area):
 			area.type.LAYER_CHANGE:
 				can_change_layer = true
 				last_layer = area
-				exit_layer(last_layer.get_layer_bit())
 				return
 
 func _on_trigger_area_exited(area):
@@ -165,9 +169,17 @@ func _on_trigger_area_exited(area):
 				return
 			area.type.LAYER_CHANGE:
 				can_change_layer = false
-				if !change_layer_pressed: exit_layer(last_layer.get_layer_bit())
-				change_layer_pressed = false
+				if last_layer and facing != last_layer.get_enter_vector() and !change_layer_pressed:
+					change_layer(false)
+					change_layer_pressed = false
+				last_layer = null
 				return
+
+func _on_can_change_layer():
+	if !change_layer_pressed: change_layer(false)
+
+func _on_layer_reset():
+	change_layer_pressed = false
 
 func _on_ledge_area_entered(area):
 	emit_signal("on_ledge_entered",area)
@@ -346,10 +358,8 @@ func make_ranged_attack():
 	projectile_instance.origin = "Player"
 	get_parent().add_child(projectile_instance)
 
-func change_layer():
-	emit_signal("on_change_layer")
-	change_layer_pressed = true
-	#enter_layer(last_layer.get_layer_bit())
+func change_layer(value):
+	emit_signal("on_change_layer",value,last_layer.get_layer_bit())
 
 func check_pos_to_wall(area):
 	var can_wallrun = false
@@ -429,21 +439,6 @@ func on_hit():
 
 func is_hidden():
 	return true if state_machine.get_current_state() == "Hiding" else false
-
-func enter_layer(layer_bit):
-	if last_layer.can_enter_layer():
-		actual_layer = layer_bit
-		set_collision_mask_bit(layer_bit,true)
-
-func exit_layer(layer_bit):
-	var can_exit = false
-	if last_layer.can_exit_layer():
-		can_exit = true
-	elif last_layer.can_enter_layer():
-		can_exit = true
-	if can_exit:
-		actual_layer = 0
-		set_collision_mask_bit(layer_bit,false)
 
 func enable_ray_casts(value):
 	world_detector.enabled(value)

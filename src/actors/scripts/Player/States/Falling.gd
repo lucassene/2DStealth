@@ -53,7 +53,8 @@ func update(actor,delta):
 	if state_machine.current_ledge:
 		state_machine.set_on_ledge_state()
 		return
-	if state_machine.wall and jump_pressed and actor.can_wall_jump(state_machine.wall) and is_above_height(actor):
+	var wall = state_machine.get_wall_to_run()
+	if wall and jump_pressed and actor.can_wall_jump(wall) and is_above_height(actor):
 		state_machine.set_state("Jumping")
 		return
 	if jump_pressed and actor.is_on_floor():
