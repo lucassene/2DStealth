@@ -74,9 +74,11 @@ func ladder_down(_param):
 func set_ladder_collision(param):
 	state_machine.ladder.set_platform_collision(param)
 
-func enter_hide(_param):
+func interact(_param):
 	if state_machine.hideout and actor.can_hide():
 		actor.enter_hiding_state()
+		return
+	actor.toggle_switch()
 
 func exit_hide(_param):
 	if state_machine.hideout.can_player_move():

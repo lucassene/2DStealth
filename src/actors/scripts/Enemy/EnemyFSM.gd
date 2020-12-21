@@ -4,10 +4,17 @@ var enemy_controller
 
 var is_player_hidden = false
 var is_player_in_sight = false
-var prior_air_state setget ,get_prior_air_state
+var is_alerted = false setget set_is_alerted
+var previous_air_state setget ,get_previous_air_state
 
-func get_prior_air_state():
-	return prior_air_state
+func set_is_alerted(value):
+	is_alerted = value
+
+func get_is_alerted():
+	return is_alerted
+
+func get_previous_air_state():
+	return previous_air_state
 
 func _on_player_detected():
 	is_player_in_sight = true
@@ -41,11 +48,22 @@ func initialize(first_state):
 	enemy_controller.initialize(self,actor.get_reaction_time())
 
 func set_air_state(state):
-	prior_air_state = current_state
+	previous_air_state = current_state
 	set_state(state)
 
 func back_from_air():
-	set_state(prior_air_state)
+	set_state(previous_air_state)
+
+func is_really_not_alerted():
+	if next_state == "Shooting" or next_state == "Attacking" or next_state == "Jumping":
+		return true
+	else: return false
+
+func set_fov_size():
+	if states[current_state].has_method("set_fov_size"):
+		states[current_state].set_fov_size(actor)
+	else:
+		actor.set_fov_size(Vector2.ONE)
 
 func connect_to_player():
 	Global.player.connect("on_hide",self,"_on_player_hide")

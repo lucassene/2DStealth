@@ -3,7 +3,9 @@
 [ext_resource path="res://src/res/tileset.tres" type="TileSet" id=1]
 [ext_resource path="res://src/utils/scripts/LayerManager.gd" type="Script" id=2]
 
-[node name="LayerMap" type="TileMap"]
+[node name="LayerMap" type="TileMap" groups=[
+"World",
+]]
 modulate = Color( 1, 1, 1, 0.843137 )
 tile_set = ExtResource( 1 )
 cell_size = Vector2( 96, 96 )

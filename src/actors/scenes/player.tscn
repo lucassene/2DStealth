@@ -45,7 +45,6 @@ extents = Vector2( 74, 96 )
 [node name="Player" type="KinematicBody2D" groups=[
 "Player",
 ]]
-z_index = 1
 collision_mask = 118
 script = ExtResource( 2 )
 
@@ -241,6 +240,7 @@ script = ExtResource( 21 )
 script = ExtResource( 20 )
 [connection signal="on_attack_ended" from="." to="ActionStateMachine" method="_on_Player_on_attack_ended"]
 [connection signal="on_hide" from="." to="StateMachine" method="_on_Player_hide"]
+[connection signal="on_hideout_body_exited" from="." to="StateMachine" method="_on_hideout_body_exited"]
 [connection signal="on_hideout_entered" from="." to="StateMachine" method="_on_Player_on_hideout_entered"]
 [connection signal="on_hideout_exited" from="." to="StateMachine" method="_on_Player_on_hideout_exited"]
 [connection signal="on_ladder_entered" from="." to="StateMachine" method="_on_Player_on_ladder_entered"]

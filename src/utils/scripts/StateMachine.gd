@@ -7,12 +7,16 @@ var states = {}
 
 var current_state setget ,get_current_state
 var previous_state setget ,get_previous_state
+var next_state setget ,get_next_state
 
 func get_current_state():
 	return current_state
 
 func get_previous_state():
 	return previous_state
+
+func get_next_state():
+	return next_state
 
 func initialize(first_state):
 	for child in get_children():
@@ -22,6 +26,7 @@ func initialize(first_state):
 
 func set_state(new_state):
 	if current_state:
+		next_state = new_state
 		previous_state = current_state
 		exit_state(current_state)
 	current_state = new_state

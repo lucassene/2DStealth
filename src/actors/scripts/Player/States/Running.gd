@@ -2,6 +2,7 @@ extends State
 
 export var SPEED_MODIFIER = 8 setget ,get_max_speed
 export var ACCELERATION = 30
+export var INTERACT_SIZE = 1.5
 
 var player_controller
 var current_speed
@@ -13,6 +14,7 @@ func get_max_speed():
 func enter(actor,_delta = 0.0):
 	player_controller = actor.get_player_controller()
 	actor.set_debug_text("RUNNING")
+	actor.update_interact_area(INTERACT_SIZE)
 	current_speed = state_machine.get_x_speed()
 	previous_dir = Vector2.ZERO
 	state_machine.set_x_speed(get_max_speed())
@@ -24,7 +26,7 @@ func handle_input(event):
 	if player_controller.check_input_pressed(event,"climb_down","ladder_down"): return
 	if player_controller.check_input_pressed(event,"melee","set_melee_attack"): return
 	if player_controller.check_input_pressed(event,"shoot","set_ranged_attack"): return
-	if player_controller.check_input_pressed(event,"interact","enter_hide"): return
+	if player_controller.check_input_pressed(event,"interact","interact"): return
 	if player_controller.check_input_released(event,"dash","enter_walking"): return
 
 func update(actor,delta):

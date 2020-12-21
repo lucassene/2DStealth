@@ -7,12 +7,26 @@ var facing = Vector2.LEFT setget ,get_facing
 var next_dir = 0 setget ,get_next_dir
 var next_dir_time = 0
 var reaction_time = 450
+var y_speed setget set_y_speed,get_y_speed
+var x_speed setget set_x_speed,get_x_speed
 
 func get_facing():
 	return facing
 
 func get_next_dir():
 	return next_dir
+
+func set_y_speed(value):
+	y_speed = value
+
+func get_y_speed():
+	return y_speed
+	
+func set_x_speed(value):
+	x_speed = value
+
+func get_x_speed():
+	return x_speed
 
 func initialize(machine,reaction):
 	state_machine = machine
@@ -35,12 +49,15 @@ func update_movement(target,speed,delta,offset):
 		dir = next_dir
 	elif state_machine.get_current_state() != "Alerted":
 		dir = next_dir
-		actor.turn(facing)
+	actor.turn(facing)
 	actor.move(delta,dir,speed)
 	return false
 
-func update_air_movement(delta,speed):
-	var velocity = actor.move(delta,facing.x,speed)
+func jump(speed):
+	actor.jump(facing.x,x_speed,speed)
+
+func update_air_movement(delta):
+	var velocity = actor.move(delta,facing.x,x_speed)
 	if velocity.y > 1.0 and !actor.is_on_floor(): 
 		state_machine.set_state("Falling")
 	elif actor.is_on_floor():

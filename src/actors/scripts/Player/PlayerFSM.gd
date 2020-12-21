@@ -82,7 +82,9 @@ func _on_Player_hide():
 func _on_Player_on_hideout_exited(area):
 	if area == hideout:
 		hideout = null
-		if current_state == "Hiding": set_state("Walking")
+
+func _on_hideout_body_exited():
+	if current_state == "Hiding": set_state("Walking")
 
 func _on_CoyoteTimer_timeout():
 	set_state("Falling")
@@ -96,10 +98,6 @@ func initialize(first_state):
 
 func update(delta):
 	.update(delta)
-
-func set_state(new_state):
-	actor.update_interact_area(new_state)
-	.set_state(new_state)
 
 func set_movement_state():
 	if x_speed == states.Running.get_max_speed():

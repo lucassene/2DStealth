@@ -1,0 +1,40 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://assets/switch-on.png" type="Texture" id=1]
+[ext_resource path="res://assets/switch-off.png" type="Texture" id=2]
+[ext_resource path="res://src/actors/scripts/Interactives/Switch.gd" type="Script" id=3]
+
+[sub_resource type="SpriteFrames" id=1]
+animations = [ {
+"frames": [ ExtResource( 1 ) ],
+"loop": false,
+"name": "on",
+"speed": 1.0
+}, {
+"frames": [ ExtResource( 2 ) ],
+"loop": false,
+"name": "off",
+"speed": 1.0
+} ]
+
+[sub_resource type="RectangleShape2D" id=2]
+extents = Vector2( 36, 96 )
+
+[node name="Switch" type="Node2D"]
+z_index = -1
+script = ExtResource( 3 )
+
+[node name="AnimatedSprite" type="AnimatedSprite" parent="."]
+position = Vector2( 0, -96 )
+frames = SubResource( 1 )
+animation = "on"
+
+[node name="SwitchArea" type="Area2D" parent="."]
+monitorable = false
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SwitchArea"]
+position = Vector2( 0, -96 )
+shape = SubResource( 2 )
+[connection signal="body_entered" from="SwitchArea" to="." method="_on_SwitchArea_body_entered"]
+[connection signal="body_exited" from="SwitchArea" to="." method="_on_SwitchArea_body_exited"]

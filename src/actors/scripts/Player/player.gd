@@ -43,11 +43,14 @@ signal on_ledge_entered(area)
 signal on_ledge_exited()
 signal on_hideout_entered(area)
 signal on_hideout_exited(area)
+signal on_hideout_body_exited()
 signal on_hide()
 signal on_unhide()
 signal on_attack_ended()
 signal on_change_layer(value,bit)
 signal on_arrived_to_target()
+signal on_player_visible()
+signal on_player_obscured()
 
 enum transition {
 	IN,
@@ -70,6 +73,8 @@ var target_position = Vector2.ZERO
 
 var actual_layer = 0
 var last_layer: Area2D
+
+var switch
 
 var facing = Vector2.RIGHT setget set_facing,get_facing
 var sprite_size
@@ -137,105 +142,6 @@ func set_time_scale():
 	if Input.is_action_just_pressed("normal_time"):
 		Engine.time_scale = 1.0
 		set_physics_process(true)
-
-func _on_ladder_area_entered(area):
-	emit_signal("on_ladder_entered",area)
-
-func _on_ladder_area_exited():
-	emit_signal("on_ladder_exited")
-
-func _on_trigger_area_entered(area):
-	if area.is_in_group("TriggerArea"):
-		match area.get_area_type():
-			area.type.PARKOUR_WALL:
-				emit_signal("on_wall_entered",area)
-				return
-			area.type.HIDEOUT:
-				emit_signal("on_hideout_entered",area)
-				return
-			area.type.LAYER_CHANGE:
-				can_change_layer = true
-				last_layer = area
-				return
-
-func _on_trigger_area_exited(area):
-	if area.is_in_group("TriggerArea"):
-		match area.get_area_type():
-			area.type.PARKOUR_WALL:
-				emit_signal("on_wall_exited",area)
-				return
-			area.type.HIDEOUT:
-				emit_signal("on_hideout_exited",area)
-				return
-			area.type.LAYER_CHANGE:
-				can_change_layer = false
-				if last_layer and facing != last_layer.get_enter_vector() and !change_layer_pressed:
-					change_layer(false)
-					change_layer_pressed = false
-				last_layer = null
-				return
-
-func _on_can_change_layer():
-	if !change_layer_pressed: change_layer(false)
-
-func _on_layer_reset():
-	change_layer_pressed = false
-
-func _on_ledge_area_entered(area):
-	emit_signal("on_ledge_entered",area)
-
-func _on_ledge_area_exited():
-	emit_signal("on_ledge_exited")
-
-func _on_in_enemy_sight():
-	in_enemy_sight = true
-
-func _on_out_of_enemy_sight():
-	in_enemy_sight = false
-
-func _on_enemy_contact():
-	print("you're dead!")
-
-func _on_meleeArea_body_entered(body):
-	if body.is_in_group("Enemy"):
-		body.on_hit()
-
-func _on_AnimationPlayer_animation_finished(anim_name):
-	match anim_name:
-		"meleeSlash":
-			emit_signal("on_attack_ended")
-		"jump_to_hide":
-			is_going_to_hide = false
-			if state_machine.get_current_state() == "Hiding" and is_going_to_unhide:
-				is_going_to_unhide = false
-				state_machine.set_state("Idle")
-
-func _on_AnimationPlayer_animation_started(anim_name):
-	match anim_name:
-		"jump_to_hide":
-			if state_machine.get_current_state() != "Hiding":
-				state_machine.set_state("Hiding")
-			elif animation_player.get_playing_speed() < 0:
-				is_going_to_unhide = true
-
-func _on_NoiseTween_tween_completed(_object, _key):
-	pass # Replace with function body.
-
-func _on_noiseStepTimer_timeout():
-	pass # Replace with function body.
-
-func _on_PositionTween_completed(_object, _key):
-	if climbing_ledge:
-		tween_position(Vector2(position.x + sprite_size * 1.25 * facing.x,position.y),0.25)
-		state_machine.set_state("Idle")
-		climbing_ledge = false
-		return
-
-func _on_enemy_alerted():
-	is_enemy_alerted = true
-
-func _on_enemy_not_alerted():
-	is_enemy_alerted = false
 
 func _ready():
 	Global.player = self
@@ -392,20 +298,8 @@ func turn():
 		meleeSprite.flip_v = true
 		world_detector.scale.x = -1.0
 
-func update_interact_area(state):
-	match state:
-		"Idle","Crouch":
-			interact_area.scale.x = 1.0
-			return
-		"Crouch_Walk":
-			interact_area.scale.x = 1.15
-			return
-		"Walking":
-			interact_area.scale.x = 1.25
-			return
-		"Running":
-			interact_area.scale.x = 1.5
-			return
+func update_interact_area(size):
+	interact_area.scale.x = size
 
 func tween_position(new_position,time):
 	positionTween.interpolate_property(self,"position",Vector2(position.x,position.y),new_position,time,positionTween.TRANS_LINEAR,positionTween.EASE_IN_OUT)
@@ -442,3 +336,128 @@ func is_hidden():
 
 func enable_ray_casts(value):
 	world_detector.enabled(value)
+
+func toggle_switch():
+	if switch:
+		switch.toggle_switch()
+
+func _on_ladder_area_entered(area):
+	emit_signal("on_ladder_entered",area)
+
+func _on_ladder_area_exited():
+	emit_signal("on_ladder_exited")
+
+func _on_trigger_area_entered(area):
+	if area.is_in_group("TriggerArea"):
+		match area.get_area_type():
+			area.type.PARKOUR_WALL:
+				emit_signal("on_wall_entered",area)
+				return
+			area.type.HIDEOUT:
+				emit_signal("on_hideout_entered",area)
+				return
+			area.type.LAYER_CHANGE:
+				can_change_layer = true
+				last_layer = area
+				if area.is_auto_change():
+					set_change_layer_pressed(true)
+					change_layer(true)
+				return
+
+func _on_trigger_area_exited(area):
+	if area.is_in_group("TriggerArea"):
+		match area.get_area_type():
+			area.type.PARKOUR_WALL:
+				emit_signal("on_wall_exited",area)
+				return
+			area.type.HIDEOUT:
+				emit_signal("on_hideout_exited",area)
+				return
+			area.type.LAYER_CHANGE:
+				can_change_layer = false
+				if last_layer and facing != last_layer.get_enter_vector() and !change_layer_pressed:
+					change_layer(false)
+					change_layer_pressed = false
+				last_layer = null
+				return
+
+func _on_can_change_layer():
+	if !change_layer_pressed: change_layer(false)
+
+func _on_area_body_exited(area):
+	if area.is_in_group("TriggerArea"):
+		match area.get_area_type():
+			area.type.LAYER_CHANGE:
+				change_layer_pressed = false
+				return
+			area.type.HIDEOUT:
+				emit_signal("on_hideout_body_exited")
+				return
+
+func _on_ledge_area_entered(area):
+	emit_signal("on_ledge_entered",area)
+
+func _on_ledge_area_exited():
+	emit_signal("on_ledge_exited")
+
+func _on_in_enemy_sight():
+	in_enemy_sight = true
+
+func _on_out_of_enemy_sight():
+	in_enemy_sight = false
+
+func _on_enemy_contact():
+	print("you're dead!")
+
+func _on_meleeArea_body_entered(body):
+	if body.is_in_group("Enemy"):
+		body.on_hit()
+
+func _on_AnimationPlayer_animation_finished(anim_name):
+	match anim_name:
+		"meleeSlash":
+			emit_signal("on_attack_ended")
+		"jump_to_hide":
+			is_going_to_hide = false
+			if state_machine.get_current_state() == "Hiding" and is_going_to_unhide:
+				is_going_to_unhide = false
+				state_machine.set_state("Idle")
+
+func _on_AnimationPlayer_animation_started(anim_name):
+	match anim_name:
+		"jump_to_hide":
+			if state_machine.get_current_state() != "Hiding":
+				state_machine.set_state("Hiding")
+			elif animation_player.get_playing_speed() < 0:
+				is_going_to_unhide = true
+
+func _on_NoiseTween_tween_completed(_object, _key):
+	pass # Replace with function body.
+
+func _on_noiseStepTimer_timeout():
+	pass # Replace with function body.
+
+func _on_PositionTween_completed(_object, _key):
+	if climbing_ledge:
+		tween_position(Vector2(position.x + sprite_size * 1.25 * facing.x,position.y),0.25)
+		state_machine.set_state("Idle")
+		climbing_ledge = false
+		return
+
+func _on_enemy_alerted():
+	is_enemy_alerted = true
+
+func _on_enemy_not_alerted():
+	is_enemy_alerted = false
+
+func _on_player_in_light():
+	emit_signal("on_player_visible")
+
+func _on_player_out_of_light():
+	emit_signal("on_player_obscured")
+
+func _on_player_can_switch(node):
+	switch = node
+
+func _on_player_cannot_switch():
+	switch = null

@@ -23,6 +23,7 @@ func handle_input(event):
 	if player_controller.check_input_pressed(event,"move_left"):
 		set_leaving()
 		return
+	if player_controller.check_input_pressed(event,"jump","jump"): return
 	if player_controller.check_input_pressed(event,"interact","exit_hide"): return
 	if player_controller.check_input_pressed(event,"climb_up","enter_wall_run"): return
 	if player_controller.check_input_pressed(event,"camera_focus_right","focus_camera_right"): return
@@ -39,8 +40,6 @@ func update(actor,delta):
 		var dir = Vector2.ZERO
 		dir.x = get_x_movement()
 		actor.move(delta,dir,current_speed)
-#	if state_machine.hideout and !state_machine.hideout.can_move and get_x_movement() != 0:
-#		state_machine.set_state("Walking")
 
 func exit(actor):
 	state_machine.reset_x_speed()

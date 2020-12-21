@@ -1,10 +1,13 @@
 extends State
 
+export var  INTERACT_SIZE = 1.0
+
 var player_controller
 
 func enter(actor,_delta = 0.0):
 	player_controller = actor.get_player_controller()
 	actor.set_debug_text("IDLE")
+	actor.update_interact_area(INTERACT_SIZE)
 	state_machine.reset_gravity()
 	state_machine.set_previous_ledge(null)
 
@@ -13,7 +16,7 @@ func handle_input(event):
 	if player_controller.check_input_pressed(event,"jump","jump"): return
 	if player_controller.check_input_pressed(event,"climb_up","on_key_up"): return
 	if player_controller.check_input_pressed(event,"climb_down","ladder_down"): return
-	if player_controller.check_input_pressed(event,"interact","enter_hide"): return
+	if player_controller.check_input_pressed(event,"interact","interact"): return
 	if player_controller.check_input_pressed(event,"melee","set_melee_attack"): return
 	if player_controller.check_input_pressed(event,"shoot","set_ranged_attack"): return
 	if player_controller.check_input_pressed(event,"dash","set_running_speed"): return
