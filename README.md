@@ -4,7 +4,7 @@
 The goals is to make a 2D Platformar game with many elements of stealth and subterfuge, allowing players to interact with the environment and dealing with the consequences. There is no *one* path to the objective.
 
 ## Footage
-![Youtube link](https://img.youtube.com/vi/h8_7wpouzn0/0.jpg)
+[![Youtube link](https://img.youtube.com/vi/h8_7wpouzn0/0.jpg)](https://youtu.be/h8_7wpouzn0)
 
 ## Features
 
